@@ -1,33 +1,48 @@
 source("R/00_utilities.R")
 
 # Data unzipping ===============================================================
-list.files(
-  file.path("data", "raw", "EX-003 Master Voter List"),
-  pattern = ".zip", full.names = TRUE
-) %>%
+file_paths <- list(
+  master_voter = file.path("data", "raw", "EX-003 Master Voter List"),
+  returned = 
+    file.path("data", "raw", "CE-068c_Voters_With_Returned_Ballot_List_Public"),
+  cured = file.path("data", "raw", "CE-077_Rejected_Cure"),
+  undelivered = file.path("data", "raw", "CE-037_UndeliverableBallots")
+)
+
+file_paths %>%
+  map(
+    ~ {
+      out <- tibble(
+        path = .x, 
+        files = list.files(.x, pattern = ".zip", full.names = TRUE)
+      )
+      if (grepl("Cure|Undeliverable", .x)) {
+        out %>%
+          filter(files %in% file_recent(out, pattern = "_([0-9]{1,8})_"))
+      } else {
+        out %>%
+          filter(files %in% file_recent(out, pattern = "_([0-9]+).zip$"))
+      }
+    }
+  ) %>%
+  bind_rows() %>%
+  split(., seq(nrow(.))) %>%
   map(
     ~ system(
       "cmd.exe", 
       input = paste0(
-        "7z ", "x \"./", .x, "\" -aoa -o", "\"./",
-        file.path("data", "raw", "EX-003 Master Voter List"), "\""
+        "7z ", "x \"./", .x$files, "\" -aoa -o", "\"./", .x$path, "\""
       )
     )
   )
 
 # Data import ==================================================================
-elect <- list(
-  returned = 
-    file.path("data", "raw", "CE-068c_Voters_With_Returned_Ballot_List_Public"),
-  cured = file.path("data", "raw", "CE-077_Rejected_Cure"),
-  undelivered = file.path("data", "raw", "CE-037_UndeliverableBallots")
-) %>% 
+elect <- within(file_paths, rm("master_voter")) %>% 
   map(
-    ~ read.table(
-      list.files(.x, pattern = ".txt"), 
-      header = TRUE, sep = "|", na.strings = "", colClasses = "character",
-      fill = TRUE, stringsAsFactors = TRUE, comment.char = "",
-      nrows = nrows
+    ~ read.delim(
+      list.files(.x, pattern = ".txt", full.names = TRUE), 
+      sep = "|", na.strings = "", colClasses = "character",
+      stringsAsFactors = TRUE, nrows = nrows
     ) %>%
       clean_names()
   )
@@ -37,10 +52,9 @@ master_list <- list.files(
   pattern = "Registered.*txt", full.names = TRUE
 ) %>%
   map(
-    ~ read.table(
-      .x, header = TRUE, sep = "|", na.strings = "", colClasses = "character",
-      fill = TRUE, stringsAsFactors = TRUE, comment.char = "",
-      nrows = nrows
+    ~ read.delim(
+      .x, sep = "|", na.strings = "", colClasses = "character",
+      stringsAsFactors = TRUE, nrows = nrows
     )
   ) %>%
   bind_rows(.id = "file") %>%
