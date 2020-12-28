@@ -37,7 +37,7 @@ file_paths %>%
   )
 
 # Data import ==================================================================
-elect <- within(file_paths, rm("master_voter")) %>% 
+elect_list <- within(file_paths, rm("master_voter")) %>% 
   map(
     ~ read.delim(
       list.files(.x, pattern = ".txt", full.names = TRUE), 
@@ -47,7 +47,7 @@ elect <- within(file_paths, rm("master_voter")) %>%
       clean_names()
   )
 
-master_list <- list.files(
+master_vr <- list.files(
   file.path("data", "raw", "EX-003 Master Voter List"),
   pattern = "Registered.*txt", full.names = TRUE
 ) %>%
