@@ -16,35 +16,28 @@ list.files(
   )
 
 # Data import ==================================================================
-election_returned <- read.table(
-  file.path(
+elect <- list(
+  returned = file.path(
     "data", "raw", "CE-068c_Voters_With_Returned_Ballot_List_Public",
     "CE-068c_Voters_With_Returned_Ballot_List_Public_03Nov_600015773_null.txt"
   ),
-  sep = "|", fill = TRUE, stringsAsFactors = TRUE, comment.char = "",
-  nrows = nrows
-) %>%
-  clean_names()
-
-election_cured <- read.table(
-  file.path(
+  cured = file.path(
     "data", "raw", "CE-077_Rejected_Cure",
     "CE-077_Rejected_Cure_03Nov_600015773_20201111_115002.txt"
   ),
-  sep = "|", fill = TRUE, stringsAsFactors = TRUE, comment.char = "",
-  nrows = nrows
-) %>%
-  clean_names()
-
-election_undelivered <- read.table(
-  file.path(
+  undelivered = file.path(
     "data", "raw", "CE-037_UndeliverableBallots",
     "CE-037_UndeliverableBallots_03Nov_600015773_20201111_232502.txt"
-  ),
-  sep = "|", fill = TRUE, stringsAsFactors = TRUE, comment.char = "",
-  nrows = nrows
-) %>%
-  clean_names()
+  )
+) %>% 
+  map(
+    ~ read.table(
+      .x, header = TRUE, sep = "|", na.strings = "", colClasses = "character",
+      fill = TRUE, stringsAsFactors = TRUE, comment.char = "",
+      nrows = nrows
+    ) %>%
+      clean_names()
+  )
 
 master_list <- list.files(
   file.path("data", "raw", "EX-003 Master Voter List"),
@@ -52,7 +45,8 @@ master_list <- list.files(
 ) %>%
   map(
     ~ read.table(
-      .x, sep = "|", fill = TRUE, stringsAsFactors = TRUE, comment.char = "",
+      .x, header = TRUE, sep = "|", na.strings = "", colClasses = "character",
+      fill = TRUE, stringsAsFactors = TRUE, comment.char = "",
       nrows = nrows
     )
   ) %>%
