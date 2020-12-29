@@ -3,12 +3,21 @@ source("R/00_utilities.R")
 # Data unzipping ===============================================================
 file_paths <- list(
   master_voter = file.path("data", "raw", "EX-003 Master Voter List"),
+  ballots = file.path("data", "raw", "CE-068_Voters_With_Ballots_List_Public"),
   returned =
     file.path("data", "raw", "CE-068c_Voters_With_Returned_Ballot_List_Public"),
   cured = file.path("data", "raw", "CE-077_Rejected_Cure"),
   undelivered = file.path("data", "raw", "CE-037_UndeliverableBallots")
 )
 
+# Valid file paths?
+file_paths %>%
+  map(~ dir.exists(.x)) %>%
+  unlist() %>%
+  all() %>%
+  assert_that()
+
+# Unzip
 file_paths %>%
   map(
     ~ {
@@ -36,13 +45,13 @@ file_paths %>%
     )
   )
 
-# Data import/clean ============================================================
+# Data import/clean: election dataframes =======================================
 elect_list <- within(file_paths, rm("master_voter")) %>%
   map(
     ~ read.delim(
       list.files(.x, pattern = ".txt", full.names = TRUE),
       sep = "|", na.strings = "", colClasses = "character",
-      stringsAsFactors = TRUE, nrows = nrows
+      stringsAsFactors = TRUE, nrows = nrows, quote = ""
     ) %>%
       clean_names() %>%
       mutate_at(
@@ -56,16 +65,41 @@ elect_list <- within(file_paths, rm("master_voter")) %>%
         ~ stringi::stri_trans_general(., "latin-ascii")
       ) %>%
       mutate_if(is.character, ~ tolower(gsub("\"", "", .)))
+    # In the cured file, two instances of error
+    # Voter ID 602568350: extra columns added (46 ---> 49) in the middle
+    # Voter ID 602675030: extra line break  in street address
+    # This would have been actually *better* if there were quotes, but...
+    # It would be easier to fix the input data itself, but... 
   )
 
+# Fix anomaly in cured; may have to be adjusted by snapshot
+# First error
+temp <- elect_list$cured
+idx <- which(temp$voter_id == "602568350")
+temp[idx, which(colnames(temp) == "yob"):(ncol(temp) - 3)] <- 
+  temp[idx, which(colnames(temp) == "non_standard_res_address"):ncol(temp)]
+temp[idx, which(colnames(temp) == "modified_date"):ncol(temp)] <- 
+  temp[idx + 1, seq(3)]
+temp <- temp[-(idx + 1), ]
+
+# Second error
+idx <- which(temp$voter_id == "602675030")
+temp[idx, which(colnames(temp) == "res_house_number"):ncol(temp)] <- 
+  temp[idx, 2:which(colnames(temp) == "sent_ballot_state")]
+temp[idx, "non_standard_res_address"] <- paste(
+  temp[idx, "non_standard_res_address"], temp[idx + 1, 1]
+)
+temp <- temp[-(idx + 1), ]
+elect_list$cured <- temp
+
+# Data import/clean: voter registration data ===================================
 master_vr <- list.files(
   file.path("data", "raw", "EX-003 Master Voter List"),
   pattern = "Registered.*txt", full.names = TRUE
 ) %>%
   map(
     ~ readr::read_csv(
-      .x,
-      na = "", col_types = cols(.default = "c"),
+      .x, na = "", col_types = cols(.default = "c"),
       n_max = ifelse(nrows == -1, Inf, nrows),
       locale = readr::locale(encoding = "UTF-8")
       # If read.delim, quote = ""; otherwise, quote EOF error and misses lines
@@ -128,7 +162,7 @@ names(master_vr)
 
 intersect(names(master_vr), names(elect_list$returned))
 #  [1] "voter_id"    "county"      "last_name"   "first_name"  "middle_name"
-#  [6] "name_suffix" "gender"      "precinct"    "split"       "party"      
+#  [6] "name_suffix" "gender"      "precinct"    "split"       "party"
 # [11] "preference"
 
 nrow(inner_join(master_vr, elect_list$returned, by = "voter_id"))
