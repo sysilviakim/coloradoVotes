@@ -15,3 +15,6 @@ if (Sys.info()["sysname"] == "Windows") {
 }
 
 # Functions ====================================================================
+nchar_longest <- function(v) {
+  v[order(nchar(v), v, decreasing = TRUE)][1]
+}
