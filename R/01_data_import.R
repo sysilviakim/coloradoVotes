@@ -134,7 +134,7 @@ assert_that(
   all(unique(master_vr$congressional) %in% paste0("Congressional ", seq(7)))
 )
 
-x <- master_vr %>%
+master_vr <- master_vr %>%
   mutate(
     id_required = if_else(id_required == "N\"08468", "N", id_required)
   ) %>%
