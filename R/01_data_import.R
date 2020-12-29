@@ -154,32 +154,6 @@ assert_that(all(unique(master_vr$id_required) %in% c("Y", "N")))
 # 3,757,834 active and 456,548 inactive on Dec 1, 2020
 # 3,758,963 active and 419,474 inactive per Nov 5, 2020 snapshot
 
-# Crosswalk between files ======================================================
-names(elect_list$returned)
-names(elect_list$cured)
-names(elect_list$undelivered)
-names(master_vr)
-
-intersect(names(master_vr), names(elect_list$returned))
-#  [1] "voter_id"    "county"      "last_name"   "first_name"  "middle_name"
-#  [6] "name_suffix" "gender"      "precinct"    "split"       "party"
-# [11] "preference"
-
-nrow(inner_join(master_vr, elect_list$returned, by = "voter_id"))
-# 3286791
-nrow(inner_join(master_vr, elect_list$returned))
-# 3265620
-
-nrow(inner_join(master_vr, elect_list$cured, by = "voter_id"))
-# 29727
-nrow(inner_join(master_vr, elect_list$cured))
-# 29484
-
-nrow(inner_join(master_vr, elect_list$undelivered, by = "voter_id"))
-# 48328
-nrow(inner_join(master_vr, elect_list$undelivered))
-# 0
-
 # Save tidy format =============================================================
 if (nrows == -1) {
   save(master_vr, file = "data/tidy/master_vr.RData")
