@@ -126,19 +126,57 @@ pdf("fig/covid_cases_jhu_death_thsd.pdf", width = 7, height = 4)
 fig_list[[2]]
 dev.off()
 
+# Just Colorado ================================================================
+
+fig_list <- c("cases_thsd", "death_thsd") %>%
+  map(
+    ~ us_long %>%
+      filter(
+        date < as.Date("2020-11-04") &
+          date > as.Date("2020-03-01") & 
+          state == "Colorado"
+      ) %>%
+      ggplot() +
+      geom_line(aes(x = date, y = !!as.name(.x))) +
+      scale_x_date(breaks = "month", labels = function(x) format(x, "%b\n%Y")) +
+      xlab("Date") +
+      ylab(
+        if_else(.x == "cases_thsd", "Cases Per Thousand", "Deaths Per Thousand")
+      )
+  ) %>%
+  map(~ Kmisc::pdf_default(.x))
+
+# Decided not to export separately
+us_long %>%
+  filter(day(date) == 1 & state == "Colorado")
+
+
+# So in terms of "rankings", how bad was Colorado out of 51 jurisdictions? =====
+options(digits = 7, scipen = 999)
+
+us_long <- us_long %>%
+  filter(date == as.Date("2020-11-03")) %>%
+  arrange(desc(death_thsd)) %>%
+  mutate(death_worst = row_number()) %>%
+  arrange(desc(cases_thsd)) %>%
+  mutate(cases_worst = row_number())
+
+us_long %>%
+  filter(state == "Colorado") %>%
+  select(matches("worst|cases|death")) %>%
+  mutate_all(~ formatC(.x, format = "f", digits = 2))
+
 # Out of curiosity... which state had it worst on Election Day? ================
 
 us_long %>%
-  filter(date == as.Date("2020-11-03")) %>%
-  filter(
-    death_thsd == max(death_thsd) |
-      cases_thsd == max(cases_thsd)
-  ) %>%
+  filter(cases_worst < 3 | death_worst < 3) %>%
   select(state, cases_thsd, death_thsd, cases, death) %>%
   print(width = 1e6)
 
-#   A tibble: 2 x 5
+#   A tibble: 4 x 5
 #   state        cases_thsd death_thsd  cases death
 #   <fct>             <dbl>      <dbl>  <dbl> <dbl>
-# 1 New Jersey         27.6      1.86  242825 16371
-# 2 North Dakota       70.2      0.825  47187   555
+# 1 North Dakota       70.2      0.825  47187   555
+# 2 South Dakota       60.0      0.548  48854   446
+# 3 New Jersey         27.6      1.86  242825 16371
+# 4 New York           26.7      1.74  517822 33773
