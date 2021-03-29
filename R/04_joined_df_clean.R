@@ -9,6 +9,13 @@ if (nrows == -1) {
 
 # Cleaning the data ============================================================
 
+## County ----------------------------------------------------------------------
+assert_that(length(setdiff(unique(df$county_code), NA)) == 64)
+assert_that(length(setdiff(unique(df$county), NA)) == 64)
+assert_that(length(setdiff(unique(df$county_cur), NA)) < 64) ## not every county
+assert_that(length(setdiff(unique(df$county_rtn), NA)) == 64)
+assert_that(length(setdiff(unique(df$county_blt), NA)) == 64)
+
 ## Removing some redundant variables -------------------------------------------
 df <- df %>%
   select(-c(county_code, res_city, residential_city))
