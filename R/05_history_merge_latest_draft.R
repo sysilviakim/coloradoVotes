@@ -2,7 +2,7 @@ source(here::here("R", "utilities.R"))
 load(here("data/tidy/df_joined_tidy.RData"))
 
 # First find all directories + list files in each directory with pattern =======
-files <- list.dirs(
+file_list <- list.dirs(
   here("data", "raw", "EX-002 Voting History Files"),
   recursive = FALSE
 ) %>%
@@ -23,15 +23,17 @@ files <- list.dirs(
       )
   )
 
-# Check components of `files` list =============================================
-names(files)
-files %>% map_dbl(length)
-files %>% map_chr(class)
+save(file_list, file = here("data", "tidy", "file_list_history.Rda"))
 
-files_df <- files %>%
-  imap(~ tibble(date = .y, files = .x))
+# Check components of `file_list` list =========================================
+names(file_list)
+file_list %>% map_dbl(length)
+file_list %>% map_chr(class)
 
-# Binding all the files together to create one df to then clean ================
+files_df <- file_list %>%
+  imap_dfr(~ tibble(date = .y, file_list = .x))
+
+# Binding all the file_list together to create one df to then clean ================
 for (i in files) {
   out <- i %>%
     set_names(.) %>%
