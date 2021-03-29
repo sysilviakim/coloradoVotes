@@ -8,6 +8,8 @@ if (nrows == -1) {
 }
 
 # Cleaning the data ============================================================
+# [CHECK EACH VARIABLE HERE]
+temp <- filter_missing(df_raw)
 
 ## County ----------------------------------------------------------------------
 assert_that(length(setdiff(unique(df$county_code), NA)) == 64)
@@ -108,5 +110,5 @@ assert_that(length(unique(df_cleaned$county)) == 64)
 df_cleaned <- df_cleaned %>%
   mutate(gender = na_if(gender, "unknown"))
 
-# Saving cleaned data ==========================================================
+# Saving cleaned data (16 columns) =============================================
 save(df_cleaned, file = here("data/tidy/df_joined_tidy.RData"))

@@ -88,7 +88,7 @@ filter_missing <- function(df) {
     filter(prop_missing > 95)
   df_filtered <- df %>%
     select(-contains(missing$variable)) 
-  message(paste0("Deleted variables: ", missing$variable))
+  message(paste0("Deleted variables: ", missing$variable, "\n"))
   return(df_filtered)
 }
 
