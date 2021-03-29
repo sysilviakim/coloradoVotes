@@ -90,17 +90,16 @@ df_cleaned <- df_new %>%
     )
   )
 
+# Sanity checks ================================================================
 prop(df_cleaned, "party")
 prop(df_cleaned, "gender")
-
+# three distinct values (mail, in person paper, or in person electronic)
+prop(df_cleaned, "vote_method")
 assert_that(length(unique(df_cleaned$county)) == 64)
 
-# Coding unknown as NA as well: recoding
+# Wrangle NA values: recoding gender ===========================================
 df_cleaned <- df_cleaned %>%
   mutate(gender = na_if(gender, "unknown"))
 
-# three distinct values (mail, in person paper, or in person electronic)
-unique(df_cleaned$vote_method) 
-
-# saving the set ================================================================
+# Saving cleaned data ==========================================================
 save(df_cleaned, file = here("data/tidy/df_joined_tidy.RData"))
