@@ -15,6 +15,7 @@ if (Sys.info()["sysname"] == "Windows") {
 } else {
   nrows <- 100
 }
+options(scipen = 999)
 
 # Functions ====================================================================
 
@@ -72,22 +73,22 @@ coalesce_redundant <- function(df, word, var) {
 # Clean up function to aggregate columns:
 fix_discrepancy <- function(df, word, var) {
   df_filtered <- select(df, matches(word))
-  MainCol <- do.call(coalesce, df_filtered)
-  MainCol <- as.data.frame(MainCol)
-  df_new <- data.frame(MainCol, df)
+  main_col <- do.call(coalesce, df_filtered)
+  main_col <- as.data.frame(main_col)
+  df_new <- data.frame(main_col, df)
   names(df_new)[1] <- var
   return(df_new)
 }
 
 # A function to check missing values in each column, and filter them out:
 filter_missing <- function(df) {
-  missing <- map(df, ~ sum(is.na(.))) %>%
-    as.data.frame() %>%
-    gather(key = "variable", value = "missing") %>%
-    mutate(prop_missing = (missing / nrow(df)) * 100) %>%
+  missing <- names(df) %>%
+    map_dfr(~ tibble(variable = .x, missing = sum(is.na(df[[.x]])))) %>%
+    mutate(prop_missing = missing / nrow(df) * 100) %>%
     filter(prop_missing > 95)
   df_filtered <- df %>%
     select(-contains(missing$variable)) 
+  message(paste0("Deleted variables: ", missing$variable))
   return(df_filtered)
 }
 
