@@ -1,6 +1,6 @@
 source(here::here("R", "utilities.R"))
 
-load(here("data/tidy/master_vr.RData"))
+master_vr <- read_fst(here("data/tidy/master_vr.fst"))
 load(here("data/tidy/elect_list.RData"))
 
 # Crosswalk between files ======================================================
@@ -34,21 +34,16 @@ elect_list %>%
 # Form a master file ===========================================================
 df <- master_vr %>%
   mutate_all(trimws) %>%
+  # Clean out redundant files at a later file
   full_join(., elect_list$ballots, suffix = c("", "_blt"), by = "voter_id") %>%
   full_join(., elect_list$returned, suffix = c("", "_rtn"), by = "voter_id") %>%
   full_join(., elect_list$cured, suffix = c("", "_cur"), by = "voter_id") %>%
   full_join(., elect_list$undelivered, suffix = c("", "_und"), by = "voter_id")
 
-if (nrows == -1) {
-  save(df, file = here("data/tidy/joined_full.RData"))
-} else {
-  df <- df %>% sample_n(10000)
-  save(df, file = here("data/tidy/joined_sample_10k.RData"))
-}
-
+# Voting history for 2020 ======================================================
 # Aggregate columns: for now, simply delete what's not in master VR
 temp <- df %>% 
-  select(-matches("_blt$|_rtn$|_cur$|_und$")) %>%
+  select(party, vote_method) %>%
   mutate(
     party2 = case_when(
       party == "dem" ~ "dem", 
@@ -58,10 +53,21 @@ temp <- df %>%
       party == "dem" ~ "dem", 
       party == "rep" ~ "rep",
       party == "uaf" ~ "unaffiliated",
+      is.na(party) ~ NA_character_,
       TRUE ~ "third-party"
     )
   )
 
-# Voting history for 2020 ======================================================
+# Crosstabs
 prop(temp, c("vote_method", "party2"))
 prop(temp, c("vote_method", "party4"))
+
+# Save data ====================================================================
+if (nrows == -1) {
+  # save(df, file = here("data/tidy/joined_full.RData"))
+  write_fst(df, here("data/tidy/joined_full.fst"))
+} else {
+  set.seed(123)
+  df <- df %>% sample_n(10000)
+  save(df, file = here("data/tidy/joined_sample_10k.RData"))
+}

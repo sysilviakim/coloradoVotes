@@ -52,4 +52,6 @@ data/raw/*.xls
 data/raw/*.csv
 
 # Large data files (tidy)
+data/tidy/*.RData
 data/tidy/*.Rda
+data/tidy/*.fst

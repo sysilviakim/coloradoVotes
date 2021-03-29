@@ -105,13 +105,17 @@ master_vr <- master_vr %>%
 
 assert_that(all(unique(master_vr$id_required) %in% c("Y", "N")))
 
-# https://www.sos.state.co.us/pubs/elections/VoterRegNumbers/2020/October/VoterCountsByStatus.pdf
+# https://www.sos.state.co.us/pubs/elections/VoterRegNumbers/
+# 2020/October/VoterCountsByStatus.pdf
+
 # 3,767,236 active and 421,488 inactive on Nov 1, 2020
 # 3,757,834 active and 456,548 inactive on Dec 1, 2020
 # 3,758,963 active and 419,474 inactive per Nov 5, 2020 snapshot
 
 # Save tidy format =============================================================
 if (nrows == -1) {
-  save(master_vr, file = here("data/tidy/master_vr.RData"))
+  # save(master_vr, file = here("data/tidy/master_vr.RData"))
+  write_fst(master_vr, here("data/tidy/master_vr.fst"))
+  # Lists cannot be fst-exported
   save(elect_list, file = here("data/tidy/elect_list.RData"))
 }
