@@ -1,3 +1,5 @@
+source(here::here("R", "utilities.R"))
+
 # Data import/clean: election dataframes =======================================
 elect_list <- within(file_paths, rm("master_voter")) %>%
   map(
@@ -110,6 +112,6 @@ assert_that(all(unique(master_vr$id_required) %in% c("Y", "N")))
 
 # Save tidy format =============================================================
 if (nrows == -1) {
-  save(master_vr, file = "data/tidy/master_vr.RData")
-  save(elect_list, file = "data/tidy/elect_list.RData")
+  save(master_vr, file = here("data/tidy/master_vr.RData"))
+  save(elect_list, file = here("data/tidy/elect_list.RData"))
 }

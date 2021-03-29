@@ -1,7 +1,7 @@
-source("R/00_utilities.R")
+source(here::here("R", "utilities.R"))
 
-load("data/tidy/master_vr.RData")
-load("data/tidy/elect_list.RData")
+load(here("data/tidy/master_vr.RData"))
+load(here("data/tidy/elect_list.RData"))
 
 # Crosswalk between files ======================================================
 names(elect_list$ballots)
@@ -40,10 +40,10 @@ df <- master_vr %>%
   full_join(., elect_list$undelivered, suffix = c("", "_und"), by = "voter_id")
 
 if (nrows == -1) {
-  save(df, file = "data/tidy/joined_full.RData")
+  save(df, file = here("data/tidy/joined_full.RData"))
 } else {
   df <- df %>% sample_n(10000)
-  save(df, file = "data/tidy/joined_sample_10k.RData")
+  save(df, file = here("data/tidy/joined_sample_10k.RData"))
 }
 
 # Aggregate columns: for now, simply delete what's not in master VR
@@ -61,23 +61,7 @@ temp <- df %>%
       TRUE ~ "third-party"
     )
   )
-# df %>%
-#   rowwise() %>%
-#   mutate(
-#     first_name = nchar_longest(
-#       c(first_name, first_name_blt, first_name_cur, first_name_rtn, first_name_und)
-#     ),
-#     last_name = nchar_longest(
-#       c(last_name, last_name_blt, last_name_cur, last_name_rtn, last_name_und)
-#     ),
-#     middle_name = nchar_longest(
-#       c(middle_name, middle_name_blt, middle_name_cur, middle_name_rtn, middle_name_und)
-#     )
-#   )
 
 # Voting history for 2020 ======================================================
-round(prop.table(table(temp$vote_method, temp$party2)) * 100, digits = 1)
-round(prop.table(table(temp$vote_method, temp$party4)) * 100, digits = 1)
-
-
-
+prop(temp, c("vote_method", "party2"))
+prop(temp, c("vote_method", "party4"))
