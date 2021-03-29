@@ -37,7 +37,8 @@ files_df <- file_list %>%
 for (i in files) {
   out <- i %>%
     set_names(.) %>%
-    map_dfr(~ read.table(.x, sep = ",", header = TRUE, nrows = 1000),
+    map_dfr(
+      ~ read.table(.x, sep = ",", header = TRUE, nrows = 1000),
       .id = "history_file"
     ) %>%
     clean_names()
