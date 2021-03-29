@@ -1,5 +1,5 @@
 source(here::here("R", "utilities.R"))
-load("data/tidy/df_joined_tidy.RData")
+load(here("data/tidy/df_joined_tidy.RData"))
 
 # First find all directories + list files in each directory with pattern =======
 files <- list.dirs(
@@ -23,15 +23,6 @@ files <- list.dirs(
       )
   )
 
-# Outersect Function ===========================================================
-
-#A function I picked up from r-bloggers 
-#(https://www.r-bloggers.com/2011/11/outersect-the-opposite-of-rs-intersect-function/) 
-outersect <- function(x, y) {
-  sort(c(setdiff(x, y),
-         setdiff(y, x)))
-}
-
 # Check components of `files` list =============================================
 names(files)
 files %>% map_dbl(length)
@@ -44,19 +35,20 @@ files_df <- files %>%
 for (i in files) {
   out <- i %>%
     set_names(.) %>%
-    map_dfr(~ read.table(.x,  sep = ",", header = TRUE, nrows = 1000), 
-            .id = "history_file") %>%
-    clean_names() 
+    map_dfr(~ read.table(.x, sep = ",", header = TRUE, nrows = 1000),
+      .id = "history_file"
+    ) %>%
+    clean_names()
 }
 
-# The primary file was the only one in a different format, so loading that in 
-# separately 
+# The primary file was the only one in a different format, so loading that in
+# separately
 primary_history <- read.table(
   paste0(
     "data/raw/EX-002 Voting History Files/", "20180719/",
     "EX-002_2018_Primary_Supplemental_Vote_History/",
     "EX-002_2018_Primary_Supplemental_Vote_History.txt"
-  ), 
+  ),
   header = TRUE,
   sep = "|",
   nrows = 10000
@@ -68,55 +60,66 @@ names(primary_history)
 
 # Matching the names
 primary_history %>%
-  rename(voting_method = vote_method,
-         party = voter_party,
-         county_name = county) %>%
-  select(-c(voter_preference, voted_party, 
-            received_party_ballot)) -> primary_history
+  rename(
+    voting_method = vote_method,
+    party = voter_party,
+    county_name = county
+  ) %>%
+  select(-c(
+    voter_preference, voted_party,
+    received_party_ballot
+  )) -> primary_history
 
 primary_history$history_file <- paste0(
   "data/raw/EX-002 Voting History Files/", "20180719/",
   "EX-002_2018_Primary_Supplemental_Vote_History/",
-  "EX-002_2018_Primary_Supplemental_Vote_History.txt")
+  "EX-002_2018_Primary_Supplemental_Vote_History.txt"
+)
 
-# Binding 
-dataMain <- rbind(out, primary_history) 
+# Binding
+dataMain <- rbind(out, primary_history)
 
 # Cleaning =====================================================================
 # Cleaning to standardize
 dataMain %>%
-  rename(election_name = election_description,
-         county = county_name,
-         vote_method = voting_method) %>%
+  rename(
+    election_name = election_description,
+    county = county_name,
+    vote_method = voting_method
+  ) %>%
   mutate(election_date = mdy(election_date)) %>%
   mutate(election_year = year(election_date)) -> dataMain
 
 convert <- c("election_type", "vote_method", "party", "county")
 dataMain %>%
   mutate_at(vars(convert), funs(tolower(.))) %>%
-  mutate(election_year = as.character(election_year),
-         election_name = str_c(election_year, county, "county", election_type, 
-                               "election", sep = " ")) %>%
+  mutate(
+    election_year = as.character(election_year),
+    election_name = str_c(election_year, county, "county", election_type,
+      "election",
+      sep = " "
+    )
+  ) %>%
   select(-election_year) -> dataMain
 
 # Merging
 dataMain_1 <- dataMain %>%
   select(-history_file)
-outersect(names(dataMain_1), names(df_cleaned)) -> merge_colnames 
+outersect(names(dataMain_1), names(df_cleaned)) -> merge_colnames
 
-df_cleaned %>% 
+df_cleaned %>%
   select(all_of(merge_colnames), voter_id) -> df_merge_info
 
 inner_join(df_merge_info, dataMain, by = "voter_id") -> merged_history
 
-# Finally, fixing the file tracking variables 
+# Finally, fixing the file tracking variables
 merged_history <- merged_history %>%
   rename(file_master_vr = file) %>%
   mutate(history_track = word(history_file, -1, sep = fixed("/"))) %>%
   select(history_track, file_master_vr, everything())
 
 # Saving ======================================================================
-save(merged_history, file = here("data", "tidy",
-                                 "voter_history_full_sample.RData")) 
-
-
+save(
+  merged_history,
+  file = here("data", "tidy", "voter_history_full_sample.RData")
+)
