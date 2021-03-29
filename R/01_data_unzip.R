@@ -28,7 +28,7 @@ file_paths %>%
 file_list <- file_paths %>% 
   map(list.dirs) %>% 
   unlist() %>%
-  map(
+  map_dfr(
     ~ tibble(
       path = .x,
       files = list.files(.x, pattern = ".zip|.gz", full.names = TRUE)
@@ -40,9 +40,11 @@ file_list <- file_paths %>%
     #   out %>%
     #     filter(files %in% file_recent(out, pattern = "_([0-9]+).zip$"))
     # }
-  ) %>%
-  bind_rows()
+  )
 
+save(file_list, file = here("data", "tidy", "file_list.Rda"))
+
+# Unzip all .zip (Windows ver.) ================================================
 if (Sys.info()["sysname"] == "Windows") {
   file_list %>%
     split(., seq(nrow(.))) %>%
