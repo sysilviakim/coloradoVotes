@@ -1,22 +1,5 @@
 source(here::here("R", "utilities.R"))
 
-# Define file directory ========================================================
-# Need relative paths so not here::here
-file_paths <- list(
-  master_voter =
-    file.path("data", "raw", "EX-003 Master Voter List"),
-  hist =
-    file.path("data", "raw", "EX-002 Voting History Files"),
-  ballots =
-    file.path("data", "raw", "CE-068_Voters_With_Ballots_List_Public"),
-  returned =
-    file.path("data", "raw", "CE-068c_Voters_With_Returned_Ballot_List_Public"),
-  cured =
-    file.path("data", "raw", "CE-077_Rejected_Cure"),
-  undelivered =
-    file.path("data", "raw", "CE-037_UndeliverableBallots")
-)
-
 # Valid file paths? Verify =====================================================
 file_paths %>%
   map(~ dir.exists(.x)) %>%
