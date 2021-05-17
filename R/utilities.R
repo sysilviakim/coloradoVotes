@@ -8,6 +8,7 @@ library(here)
 library(fst)
 library(styler)
 library(Kmisc)
+library(rlist)
 
 # Other setups =================================================================
 if (Sys.info()["sysname"] == "Windows") {
@@ -97,6 +98,20 @@ filter_missing <- function(df) {
 # outersect-the-opposite-of-rs-intersect-function/
 outersect <- function(x, y) {
   sort(c(setdiff(x, y), setdiff(y, x)))
+}
+
+# A function to use to check if the merge loop is working: 
+check_loop <- function(i) {  
+  for (i in file_list[i]) {  
+    out <- i %>%
+      set_names(.) %>%
+      map_dfr(
+        ~ read.table(.x, sep = ",", header = TRUE, nrows = 10),
+        .id = "history_file"
+      ) %>%
+      clean_names()
+    assert_that(nrow(out)/10 == length(file_list[i]))
+  }
 }
 
 # Define file directory ========================================================
