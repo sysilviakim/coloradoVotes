@@ -57,8 +57,8 @@ save(out, file = here("data", "tidy", "full_history_list.fst"))
 
 out <- list.rbind(out)
 
-# The primary file was the only one in a different format, so loading that in
-# separately
+# The primary file was the only one with a different set of variables, so 
+# loading that in separately to format before merging, 
 primary_history <- read.table(
   paste0(
     "data/raw/EX-002 Voting History Files/", "20180719/",
