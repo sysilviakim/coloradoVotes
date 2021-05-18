@@ -4,6 +4,7 @@ load(here("data/tidy/file_list_history.Rda"))
 
 out <- vector("list", length(file_list))
 
+# Import file in a loop =
 for (i in 1:length(file_list)) {
   out[[i]] <- file_list[[i]] %>%
     set_names(.) %>%
@@ -15,7 +16,7 @@ for (i in 1:length(file_list)) {
 }
 out <- list.rbind(out)
 
-# Cleaning the out file to standardize a few things: 
+# Cleaning the out file to standardize a few things:
 out <- out %>%
   mutate(election_date = mdy(election_date)) %>%
   mutate(election_year = year(election_date)) %>%
@@ -28,35 +29,36 @@ out <- out %>%
   mutate(
     election_year = as.character(election_year),
     election_name = str_c(election_year, county_name, "county", election_type,
-                          "election",
-                          sep = " "
+      "election",
+      sep = " "
     )
   ) %>%
   select(-c(election_year, election_description)) %>%
-  mutate(history_file = word(history_file, -1, sep = fixed("/"))) # Fixing the 
-# history file column. 
+  mutate(history_file = word(history_file, -1, sep = fixed("/"))) # Fixing the
+# history file column.
 
-# Selecting relevant variables from df_cleaned: 
+# Selecting relevant variables from df_cleaned:
 df_join_long <- df_cleaned %>%
   rename(
     history_file = file,
-         voting_method = vote_method,
-         county_name = county
-    ) %>%
+    voting_method = vote_method,
+    county_name = county
+  ) %>%
   select(
-    history_file, voter_id, election_type, election_date, voting_method, 
-         party, county_name, election_name
-    )
+    history_file, voter_id, election_type, election_date, voting_method,
+    party, county_name, election_name
+  )
 
-# However, the voter information in this file only goes as far as identifying 
-# the voter ID, and county of the person. Adding in address, zip code, gender, 
-# and yob. 
+# However, the voter information in this file only goes as far as identifying
+# the voter ID, and county of the person. Adding in address, zip code, gender,
+# and yob.
 
 voter_info <- df_cleaned %>%
   select(voter_id, first_name, middle_name, last_name, gender, residential_zip)
 
-voter_history_long <- inner_join(voter_info, out)  
+voter_history_long <- inner_join(voter_info, out)
 
-save(voter_history_long, file = here("data", "tidy", 
-                                     "voter_history_long_sample.RData"))
-
+save(
+  voter_history_long,
+  file = here("data", "tidy", "voter_history_long_sample.RData")
+)

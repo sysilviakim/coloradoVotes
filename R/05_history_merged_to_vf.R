@@ -2,13 +2,13 @@ source(here::here("R", "utilities.R"))
 load(here("data/tidy/df_joined_tidy.RData"))
 
 # First find all directories + list files in each directory with pattern =======
+## Intentionally not using here package
 file_list <- list.dirs(
-  here("data", "raw", "EX-002 Voting History Files"),
+  "data/raw/EX-002 Voting History Files",
   recursive = FALSE
 ) %>%
   set_names(
-    .,
-    gsub(paste0(here("data/raw/EX-002 Voting History Files"), "|/"), "", .)
+    ., gsub(paste0("data/raw/EX-002 Voting History Files", "|/"), "", .)
   ) %>%
   imap(
     ~ list.files(.x, pattern = ".txt$", full.names = TRUE, recursive = T) %>%
@@ -23,7 +23,6 @@ file_list <- list.dirs(
       ) %>%
       grep(., pattern = "*Parameters*", invert = TRUE, value = TRUE)
   )
-
 save(file_list, file = here("data", "tidy", "file_list_history.Rda"))
 
 # Check components of `file_list` list =========================================
@@ -35,14 +34,11 @@ files_df <- file_list %>%
   imap_dfr(~ tibble(date = .y, file_list = .x))
 
 # Binding all of the file_list together to create one df to then clean =========
-# First using check_loop to make sure all the files will load properly into the
-# list. 
-i <- c(1:10)
-map(i, check_loop)
-# No false values were returned from assert that. It seems like the loop works. 
+# First using check_loop to make sure all files will load properly into list
+map(seq(10), check_loop)
+# No false values were returned from assert that. It seems like the loop works.
 
 out <- vector("list", length(file_list))
-
 for (i in 1:length(file_list)) {
   out[[i]] <- file_list[[i]] %>%
     set_names(.) %>%
@@ -52,17 +48,16 @@ for (i in 1:length(file_list)) {
     ) %>%
     clean_names()
 }
-
 save(out, file = here("data", "tidy", "full_history_list.fst"))
 
 out <- list.rbind(out)
 
-# The primary file was the only one with a different set of variables, so 
-# loading that in separately to format before merging, 
+# The primary file was the only one with a different set of variables, so
+# loading that in separately to format before merging
 primary_history <- read.table(
-  paste0(
-    "data/raw/EX-002 Voting History Files/", "20180719/",
-    "EX-002_2018_Primary_Supplemental_Vote_History/",
+  here(
+    "data/raw/EX-002 Voting History Files", "20180719",
+    "EX-002_2018_Primary_Supplemental_Vote_History",
     "EX-002_2018_Primary_Supplemental_Vote_History.txt"
   ),
   header = TRUE,
@@ -81,14 +76,11 @@ primary_history <- primary_history %>%
     party = voter_party,
     county_name = county
   ) %>%
-  select(-c(
-    voter_preference, voted_party,
-    received_party_ballot
-  )) 
+  select(-voter_preference, -voted_party, -received_party_ballot)
 
-primary_history$history_file <- paste0(
-  "data/raw/EX-002 Voting History Files/", "20180719/",
-  "EX-002_2018_Primary_Supplemental_Vote_History/",
+primary_history$history_file <- here(
+  "data/raw/EX-002 Voting History Files", "20180719",
+  "EX-002_2018_Primary_Supplemental_Vote_History",
   "EX-002_2018_Primary_Supplemental_Vote_History.txt"
 )
 
