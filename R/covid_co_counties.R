@@ -5,28 +5,29 @@ source(here::here("R", "utilities.R"))
 # Updated periodically
 # https://github.com/nytimes/covid-19-data/tree/master/rolling-averages
 
-link <- paste0(
-  "https://raw.githubusercontent.com/nytimes/",
-  "covid-19-data/master/rolling-averages/us-counties-recent.csv"
+covid_data <- read_csv(
+  paste0(
+    "https://raw.githubusercontent.com/nytimes/", 
+    "covid-19-data/master/us-counties.csv"
+  )
 )
-
-covid_data <- read_csv(link)
 
 # Population Data ==============================================================
 # Data from census county population estimates
 
-link2 <- paste0(
-  "https://www2.census.gov/programs-surveys/popest/datasets/",
-  "2010-2020/counties/totals/co-est2020-alldata.csv"
-)
-
-population <- read_csv(link2) %>%
+population <- read_csv(
+  paste0(
+    "https://www2.census.gov/programs-surveys/popest/datasets/",
+    "2010-2020/counties/totals/co-est2020-alldata.csv"
+  )
+) %>%
   clean_names()
 
 # Cleaning =====================================================================
 # Filtering for Colorado counties only
 covid_colorado <- covid_data %>%
   filter(state %in% "Colorado")
+assert_that(year(min(covid_colorado$date)) == 2020)
 
 co_population <- population %>%
   filter(stname %in% "Colorado") %>%
