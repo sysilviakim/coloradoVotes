@@ -12,6 +12,7 @@ for (i in 1:length(file_list)) {
       .id = "history_file"
     ) %>%
     clean_names()
+  message(paste0("File import complete for ", names(file_list)[i], "."))
 }
 out <- list.rbind(out)
 
@@ -60,7 +61,7 @@ voter_history_long <- inner_join(voter_info, out)
 if (nrows == 100) {
   save(
     voter_history_long,
-    file = here("data", "tidy", "voter_history_long_sample.RData")
+    file = here("data", "tidy", "sample", "voter_history_long_sample.RData")
   )
 } else {
   save(

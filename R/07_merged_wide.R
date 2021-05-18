@@ -1,6 +1,6 @@
 source(here::here("R", "utilities.R"))
 if (nrows == 100) {
-  load(here("data/tidy/voter_history_long_sample.RData"))
+  load(here("data/tidy/sample/voter_history_long_sample.RData"))
 } else {
   load(here("data/tidy/voter_history_long_full.RData"))
 }
@@ -59,7 +59,7 @@ voter_history_wide <- voter_history_long %>%
 if (nrows == 100) {
   save(
     voter_history_wide,
-    file = here("data", "tidy", "voter_history_wide_sample.RData")
+    file = here("data", "tidy", "sample", "voter_history_wide_sample.RData")
   )
 } else {
   save(
