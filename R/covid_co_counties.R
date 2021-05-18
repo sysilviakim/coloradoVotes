@@ -35,13 +35,15 @@ co_population <- population %>%
   select(ctyname, popestimate2020) %>%
   rename(county = ctyname)
 
-# Checking counties
-assert_that(length(setdiff(unique(covid_colorado$county), NA)) == 64)
+# Checking counties ============================================================
+assert_that(
+  length(setdiff(unique(covid_colorado$county), c(NA, "Unknown"))) == 64
+)
 assert_that(length(setdiff(unique(co_population$county), "Colorado")) == 64)
 # All counties are accounted for. In the population data, there is one
 # row for the total population of Colorado in the county column.
 
-# Joining the data
+# Joining the data =============================================================
 co_covid <- inner_join(co_population, covid_colorado, by = "county")
 
 co_covid <- co_covid %>%
@@ -60,5 +62,4 @@ co_covid <- co_covid %>%
   )
 
 # Saving =======================================================================
-assert_that(n_distinct(co_covid$county) == 64)
 save(co_covid, file = here("data", "tidy", "co_county_covid.Rda"))
