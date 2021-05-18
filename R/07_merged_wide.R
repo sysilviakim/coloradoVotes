@@ -1,5 +1,9 @@
 source(here::here("R", "utilities.R"))
-load(here("data/tidy/voter_history_long_sample.RData"))
+if (nrows == 100) {
+  load(here("data/tidy/voter_history_long_sample.RData"))
+} else {
+  load(here("data/tidy/voter_history_long_full.RData"))
+}
 
 voter_history_long %>%
   select(gender, county_name, election_type, party, voting_method) %>%
@@ -52,7 +56,14 @@ voter_history_wide <- voter_history_long %>%
   pivot_wider(names_from = election_name, values_from = vote_method) %>%
   select(-row)
 
-save(
-  voter_history_wide,
-  file = here("data", "tidy", "voter_history_wide_sample.RData")
-)
+if (nrows == 100) {
+  save(
+    voter_history_wide,
+    file = here("data", "tidy", "voter_history_wide_sample.RData")
+  )
+} else {
+  save(
+    voter_history_wide,
+    file = here("data", "tidy", "voter_history_wide_full.RData")
+  )
+}
