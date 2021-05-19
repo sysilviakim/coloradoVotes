@@ -51,10 +51,31 @@ voter_history_long <- voter_history_long %>%
   )
 
 # Changing from long to wide ===================================================
+# Column to ggregate election by year (removing county-level depedency for the 
+# wide pivot)
+voter_history_long <- voter_history_long %>%
+  mutate(election = str_c(election_type, year(election_date)))
+
+# Pivot to wide format
 voter_history_wide <- voter_history_long %>%
   mutate(row = row_number()) %>%
-  pivot_wider(names_from = election_name, values_from = vote_method) %>%
+  pivot_wider(names_from = election, values_from = vote_method) %>%
   select(-row)
+# The only issue is there are multiple observations per voter (one for each 
+# election)
+
+# Collapsing the rows to create one row per unique voter
+identifiers <- c("voter_id", "first_name", "middle_name", "last_name", 
+                 "gender", "residential_zip")
+
+remove <- c("history_file", "election_type", "election_date", "voting_method", 
+            "party", "county_name", "election_name")
+
+# Attempt
+voter_history_wide <- voter_history_wide %>%
+  select(-all_of(remove)) %>%
+  group_by_at(identifiers) %>%
+  summarise_all(na.omit)
 
 if (nrows == 100) {
   save(
