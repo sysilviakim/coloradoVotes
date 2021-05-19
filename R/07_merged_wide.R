@@ -5,11 +5,11 @@ if (nrows == 100) {
   load(here("data/tidy/voter_history_long_full.RData"))
 }
 
+# Recoding party/gender ========================================================
 voter_history_long %>%
   select(gender, county_name, election_type, party, voting_method) %>%
   map(., unique)
 
-# Recoding party/gender ========================================================
 voter_history_long <- voter_history_long %>%
   mutate(
     party = na_if(party, "no data"),
@@ -29,53 +29,70 @@ voter_history_long <- voter_history_long %>%
       male = "male",
       female = "female",
       .default = "unknown"
+    ),
+    election_type = recode(
+      election_type,
+      general = "gen",
+      primary = "pri",
+      .default = "oth"
     )
   ) %>%
-  mutate(voting_method = na_if(voting_method, ""))
+  filter(!is.na(election_type) & election_type != "oth")
 
 # Recoding voting methods ======================================================
-mail <- c("mail ballot", "absentee mail", "early voting")
+prop(voter_history_long, "voting_method", sort = TRUE)
+
+## Direct Recording Electronic (DRE)
+mail <- c("mail ballot", "absentee mail", "mail ballot - dre", "absentee carry")
 in_person <- c(
-  "polling place", "in person", "early voting - dre",
+  "polling place", "in person", "early voting - dre", "early voting",
   "in person - dre", "vote center", "vote center - dre"
 )
-unsure <- c("absentee carry", "mail ballot - dre")
 
 voter_history_long <- voter_history_long %>%
   mutate(
     vote_method = case_when(
-      (voting_method %in% unsure) ~ 0,
-      (voting_method %in% mail) ~ 1,
-      (voting_method %in% in_person) ~ 2
+      voting_method %in% mail ~ 0,
+      voting_method %in% in_person ~ 1,
+      TRUE ~ NA_real_
     )
   )
 
-# Changing from long to wide ===================================================
-# Column to ggregate election by year (removing county-level depedency for the 
-# wide pivot)
+# Column to aggregate election by year =========================================
+# (removing county-level dependency for the wide pivot)
 voter_history_long <- voter_history_long %>%
   mutate(election = str_c(election_type, year(election_date)))
 
-# Pivot to wide format
-voter_history_wide <- voter_history_long %>%
-  mutate(row = row_number()) %>%
+# Select variables and pivot to wide =========================================== 
+wide_temp <- voter_history_long %>%
+  select(voter_id, election, vote_method) %>%
+  dedup() %>%
+  group_by(voter_id, election) %>%
+  ## If both records exist, collapse as in-person voter
+  summarise(vote_method = sum(vote_method, na.rm = TRUE)) %>%
+  arrange(voter_id, election, vote_method) %>%
   pivot_wider(names_from = election, values_from = vote_method) %>%
-  select(-row)
-# The only issue is there are multiple observations per voter (one for each 
-# election)
+  select(
+    voter_id, 
+    cross2(c("gen", "pri"), seq(2020, 2000, by = -2)) %>%
+      map_chr(~ paste0(.x, collapse = ""))
+  )
 
-# Collapsing the rows to create one row per unique voter
-identifiers <- c("voter_id", "first_name", "middle_name", "last_name", 
-                 "gender", "residential_zip")
+assert_that(!any(duplicated(wide_temp$voter_id)))
 
-remove <- c("history_file", "election_type", "election_date", "voting_method", 
-            "party", "county_name", "election_name")
-
-# Attempt
-voter_history_wide <- voter_history_wide %>%
-  select(-all_of(remove)) %>%
-  group_by_at(identifiers) %>%
-  summarise_all(na.omit)
+# Merge it with all other variables ============================================
+voter_history_wide <- left_join(
+  wide_temp,
+  voter_history_long %>%
+    group_by(voter_id) %>%
+    filter(election_date == max(election_date)) %>%
+    select(
+      -election, -vote_method, -history_file, -election_date,
+      -election_type, -election_name, -voting_method
+    ) %>%
+    dedup()
+)
+assert_that(!any(duplicated(voter_history_wide$voter_id)))
 
 if (nrows == 100) {
   save(
