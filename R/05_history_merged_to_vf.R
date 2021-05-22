@@ -48,8 +48,9 @@ for (i in 1:length(file_list)) {
     ) %>%
     clean_names()
 }
-save(out, file = here("data", "tidy", "full_history_list.fst"))
+save(out, file = here("data", "tidy", "full_history_list.Rda"))
 
+# Put them together
 out <- list.rbind(out)
 
 # The primary file was the only one with a different set of variables, so
@@ -61,8 +62,7 @@ primary_history <- read.table(
     "EX-002_2018_Primary_Supplemental_Vote_History.txt"
   ),
   header = TRUE,
-  sep = "|",
-  nrows = 10000
+  sep = "|"
 ) %>%
   clean_names()
 
@@ -87,4 +87,4 @@ primary_history$history_file <- here(
 # Binding
 out <- rbind(out, primary_history)
 
-save(out, file = here("data", "tidy", "full_history_long.fst"))
+write_fst(out, here("data", "tidy", "full_history_long.fst"))
