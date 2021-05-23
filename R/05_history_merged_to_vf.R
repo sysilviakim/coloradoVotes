@@ -87,4 +87,13 @@ primary_history$history_file <- here(
 # Binding
 out <- rbind(out, primary_history)
 
+# Initial check to make sure gen2020 voter number is reasonable: 
+out %>%
+  mutate(election_date = mdy(election_date)) %>%
+  mutate(election = str_c(election_type, year(election_date))) %>%
+  filter(election %in% "General2020") %>% 
+  nrow()
+
+## [1] 3280141; it is a little over 100k off, but seems pretty close. 
+
 write_fst(out, here("data", "tidy", "full_history_long.fst"))
