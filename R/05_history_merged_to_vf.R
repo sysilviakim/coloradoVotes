@@ -94,6 +94,6 @@ out %>%
   filter(election %in% "General2020") %>% 
   nrow()
 
-## [1] 3280141; it is a little over 100k off, but seems pretty close. 
+## [1] 3280141; it is a little over 10k off, but seems pretty close. 
 
 write_fst(out, here("data", "tidy", "full_history_long.fst"))
