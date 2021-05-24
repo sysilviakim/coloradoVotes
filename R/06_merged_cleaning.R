@@ -1,26 +1,31 @@
 source(here::here("R", "utilities.R"))
 load(here("data/tidy/df_joined_tidy.RData"))
-load(here("data/tidy/file_list_history.Rda"))
-
-# Import history file in a loop ================================================
-out <- vector("list", length(file_list))
-for (i in 1:length(file_list)) {
-  out[[i]] <- file_list[[i]] %>%
-    set_names(.) %>%
-    map_dfr(
-      ~ read.table(.x, sep = ",", header = TRUE, nrows = nrows),
-      .id = "history_file"
-    ) %>%
-    clean_names()
-  message(paste0("File import complete for ", names(file_list)[i], "."))
+if (nrows == 100) {
+  load(here("data/tidy/sample/voter_history_long_sample.RData"))
+  out <- voter_history_long
+} else {
+  out <- read_fst(here("data", "tidy", "full_history_long.fst"))
 }
-out <- list.rbind(out)
 
 # Cleaning/standardizing raw import ============================================
 out <- out %>%
   mutate(election_date = mdy(election_date)) %>%
   mutate(election_year = year(election_date)) %>%
   mutate(voter_id = as.character(voter_id))
+
+out <- out %>%
+  mutate(election_date = case_when(
+    str_detect(history_file, "^Master.*_[0-9]{2}.txt$") & 
+      election_date == "1900-01-01" ~ 
+      mdy(str_extract(history_file, "[0-9]{2}_[0-9]{2}_[0-9]{4}")),
+    str_detect(history_file, "^Master.*[0-9]{4}.txt$") & 
+      election_date == "1900-01-01" ~ 
+      mdy(str_extract(history_file, "[0-9]{8}")),   
+    str_detect(history_file, "^EX.*") & 
+      election_date == "1900-01-01" ~ 
+      as.Date(str_extract(history_file, "[0-9]{4}"), format = "%Y"), 
+    TRUE ~ election_date
+  ))
 
 out <- out %>%
   mutate(
