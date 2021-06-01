@@ -71,7 +71,24 @@ augment(vote_model_1, new_data = voting_test_1) %>%
   conf_mat(estimate = .pred_class, truth = gen2020)
 # Still Bad. Nothing changed. All predictions are mail-in. 
 
-# Model 3 ======================================================================
+# Attempt 3 ====================================================================
+# Trying basic weighting based on distribution: 
+summary(reg_data$gen2020)/nrow(reg_data)
+
+# Add weights:
+reg_data_wt <- reg_data %>%
+  mutate(wt = case_when(
+    gen2020 == 0 ~ 4.6,
+    gen2020 == 1 ~ 95.4
+  ))
+
+# Regression
+vote_model_2 <- glm(gen2020 ~ gender + birth_year, weights = reg_data$wt, 
+                    data = reg_data, family = binomial("logit"))
+
+confusion_matrix(vote_model_2)
+# No change. 
+
 # Trying to see if adjusting probability threshold might change something:
 augment(vote_model_1, new_data = voting_test_1) %>%
   select(.pred_0, .pred_1, gen2020) %>%
