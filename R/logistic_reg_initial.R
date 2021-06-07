@@ -8,152 +8,119 @@ if (nrows == 100) {
 }
 
 # Set up =======================================================================
-# Check distribution; and format data to remove na values in gen2020: 
+# Clean data: 
 reg_data <- subset(wide_profile_temp, !is.na(gen2020)) %>%
-  mutate(birth_year = as.integer(birth_year),
-         gen2020 = as.factor(gen2020)) %>%
-  filter(gender != "unknown") 
+  filter(gender != "unknown") %>%
+  mutate(birth_year = as.numeric(birth_year),
+         gen2020 = as.factor(gen2020),
+         gender_en = ifelse(gender %in% "female", 1, 0),
+         gender_en = as.numeric(gender_en)) %>%
+  select(gen2020, gender_en, birth_year)
 
-# Plot distribution: 
-reg_data %>%
-  ggplot(aes(gen2020)) +
-  geom_bar()
-
-# Also a table to see the disparity in precise numbers
-reg_data %>% 
-  group_by(gen2020) %>% 
-  tally()
-# As expected there are significantly more mail votes than in person, so trying
-# three approaches. 
-
-# Model 1 ======================================================================
-# Split data as it is to have a default model
-set.seed(1234)
-voting_split <- initial_split(reg_data)
-voting_test <- testing(voting_split)
-voting_train <- training(voting_split)
-
-# Creat a logistic reg model
-vote_model <- logistic_reg() %>%
-  fit(gen2020 ~ gender + party + birth_year, data = voting_train)
-
-# Check model
-vote_model$fit %>%
-  summary()
-
-# Confusion Matrix
-augment(vote_model, new_data = voting_test) %>%
-  conf_mat(estimate = .pred_class, truth = gen2020)
-# Absolutely terrible model, it predicted everything as mail in, no in person
-# predictions. Nonetheless, expected. 
-
-# Model 2 ======================================================================
-# This time use stratified sampling
-voting_split_1 <- initial_split(reg_data, strata = gen2020)
-voting_test_1 <- testing(voting_split)
-voting_train_1 <- training(voting_split)
-
-# Creat a logistic reg model--only include gender and birth year this time
-vote_model_1 <- logistic_reg() %>%
+# Set model specs: 
+log_spec <- logistic_reg() %>%
   set_engine("glm") %>%
-  fit(gen2020 ~ gender + birth_year, data = voting_train)
+  set_mode("classification")
 
-# Also create the model with baseR code for ROC curve: 
-vote_model_base <- glm(gen2020 ~ gender + birth_year, 
-                       family=binomial(link='logit'),
-                       voting_train)
+# Set workflow: 
+log_wf <- workflow() %>%
+  add_model(log_spec) %>%
+  add_formula(gen2020 ~ gender_en + birth_year)
 
-# Check model
-vote_model_1$fit %>%
-  summary()
-# Confusion Matrix
-augment(vote_model_1, new_data = voting_test_1) %>%
+# Create a split; 
+set.seed(1234)
+vote_split <- initial_split(reg_data, prop = 0.5)
+vote_train <- training(vote_split)
+vote_test <- testing(vote_split)
+
+# Check distribution: 
+prop.table(table(reg_data$gen2020))
+# 0         1 
+# 0.9542503 0.0457497 
+
+prop.table(table(vote_test$gen2020))
+# 0          1 
+# 0.94864227 0.05135773 
+
+prop.table(table(vote_train$gen2020))
+# 0          1 
+# 0.95985832 0.04014168 
+# Splits are representative. 
+
+# Models =======================================================================
+# Simple logistic regression: 
+vote_log <- fit(log_wf, data = vote_train)
+
+# Confusion matrix: 
+augment(vote_log, new_data = vote_test) %>%
   conf_mat(estimate = .pred_class, truth = gen2020)
-# Still Bad. Nothing changed. All predictions are mail-in. 
+#           Truth
+# Prediction    0    1
+#          0 1607   87
+#          1    0    0
+# Even I can make this prediction; this is not a great model. 
 
-# Attempt 3 ====================================================================
-# Trying basic weighting based on distribution: 
-summary(reg_data$gen2020)/nrow(reg_data)
+# Trying different balancing methods: 
+# Oversampling: 
+vote_over <- ovun.sample(gen2020 ~ ., vote_train,
+                         method = "over", p = 0.5)$data
 
-# Add weights:
-reg_data_wt <- reg_data %>%
-  mutate(wt = case_when(
-    gen2020 == 0 ~ 4.6,
-    gen2020 == 1 ~ 95.4
-  ))
+prop.table(table(vote_over$gen2020))
+# 0         1 
+# 0.5007699 0.4992301 
 
-# Regression
-vote_model_2 <- glm(gen2020 ~ gender + birth_year, weights = reg_data$wt, 
-                    data = reg_data, family = binomial("logit"))
+# Undersampling: 
+vote_under <- ovun.sample(gen2020 ~ ., vote_train,
+                          method = "under", p = 0.5)$data
 
-confusion_matrix(vote_model_2)
-# No change. 
+prop.table(table(vote_under$gen2020))
+# 0         1 
+# 0.5142857 0.4857143 
 
-# Trying to see if adjusting probability threshold might change something:
-augment(vote_model_1, new_data = voting_test_1) %>%
-  select(.pred_0, .pred_1, gen2020) %>%
-  arrange(desc(.pred_1)) %>%
-  view()
+# Both: 
+vote_both <- ovun.sample(gen2020 ~ ., vote_train,
+                         method = "both", N = nrow(vote_train), p = 0.5)$data
 
-# Build ROC curve
-pred <- predict(vote_model_base, voting_test, type = "response")
-predic <- prediction(pred, voting_test$gen2020)
-perf <- performance(predic, measure = "tpr", x.measure = "fpr")
+prop.table(table(vote_under$gen2020))
+# 0         1 
+# 0.5142857 0.4857143 
 
-# Make an ROC plot
-plot(perf)
-# Seems awfully close to the x = y line. 
-auc(voting_test$gen2020,pred)
-# As expected has a very low score: 0.6374 
+# ROSE:
+vote_rose <- ROSE(gen2020 ~ ., vote_train)$data
 
-# Maybe changing the threshold to 6%, 5%, or 4%? 
+prop.table(table(vote_rose$gen2020))
+# 0         1 
+# 0.4769776 0.5230224 
 
-# Trying different thresholds: 
-pred_6 <- ifelse(pred > 0.06,1,0)
-auc(voting_test$gen2020,pred_6)
+# Fit different models: 
+model_under <- fit(log_wf, data = vote_under)
+model_over <- fit(log_wf, data = vote_over)
+model_both <- fit(log_wf, data = vote_both)
+model_rose <- fit(log_wf, data = vote_rose)
 
-pred_5 <- ifelse(pred > 0.05,1,0)
-auc(voting_test$gen2020,pred_5)
+# Area under ROCs: 
+predict_1 <- augment(model_under, vote_test) %>%
+  pull(.pred_1)
+roc.curve(vote_test$gen2020, predict_1)
+# Area under the curve (AUC): 0.627
 
-pred_4 <- ifelse(pred > 0.04,1,0)
-auc(voting_test$gen2020,pred_4)
-# It stops at 0.6032 here; not worth going below. The model got worse compared
-# to the 0.5 threshold. 
+predict_2 <- augment(model_over, vote_test) %>%
+  pull(.pred_1)
+roc.curve(vote_test$gen2020, predict_2)
+# Area under the curve (AUC): 0.627
 
-# Set to thresholds: 
-conf_vote <- augment(vote_model_1, new_data = voting_test_1) %>%
-  mutate(pred_6 = case_when(
-    .pred_1 > 0.06 ~ "1",
-    TRUE ~ "0"
-  ),
-  pred_5 = case_when(
-    .pred_1 > 0.05 ~ "1",
-    TRUE ~ "0"
-  ),
-  pred_4 = case_when(
-    .pred_1 > 0.04 ~ "1",
-    TRUE ~ "0"))
+predict_3 <- augment(model_both, vote_test) %>%
+  pull(.pred_1)
+roc.curve(vote_test$gen2020, predict_3)
+# Area under the curve (AUC): 0.627
 
-# Check confusion matrices: 
-conf_vote %>%
-  conf_mat(estimate = pred_6, truth = gen2020) %>%
-  autoplot(type = "heatmap")
+predict_4 <- augment(model_rose, vote_test) %>%
+  pull(.pred_1)
+roc.curve(vote_test$gen2020, predict_4)
+# Area under the curve (AUC): 0.627
 
-conf_vote %>%
-  conf_mat(estimate = pred_5, truth = gen2020) %>%
-  autoplot(type = "heatmap")
+# They aren't that better than the initial model. 
 
-conf_vote %>%
-  conf_mat(estimate = pred_4, truth = gen2020) %>%
-  autoplot(type = "heatmap")
-
-# The trade-off for adjusting the threshold to a lower bound is too high;
-# it is making marginally higher in-person predictions for a substantial number 
-# of wrong mail-in predictions. 
-# Although, it was very surprising to see that party wasn't a major predictor in 
-# whether the person voted in person or not--perhaps a finding to report? 
-# Age and gender were significant predictors, but they did not help much  with 
-# the classification model. 
 
 
 
