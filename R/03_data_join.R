@@ -17,9 +17,10 @@ common_vars <- elect_list %>% map(names) %>% Reduce(intersect, .)
 nrow(inner_join(master_vr, elect_list$returned, by = "voter_id"))
 # 3286791
 nrow(inner_join(master_vr, elect_list$returned, by = common_vars))
-# 3280590
+# [1] 82178 (this is a lot lower than the old number, but the mismatches arise
+# from name_suffix, which is an inconsequential variable)
 nrow(inner_join(master_vr, elect_list$returned))
-# 3265620
+# [1] 1103 (same reason as above)
 
 # In that case, any voter not in master VR file? Yes... use full_join ==========
 elect_list %>%
@@ -28,8 +29,8 @@ elect_list %>%
       nrow
   ) %>%
   unlist()
-# ballots    returned       cured undelivered 
-# 19909       19793         364         125
+# ballots    returned     cured  undelivered 
+# 133         362          11         125 
 
 # Form a master file ===========================================================
 df <- master_vr %>%
