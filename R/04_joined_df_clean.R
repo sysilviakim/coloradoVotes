@@ -18,6 +18,8 @@ assert_that(length(setdiff(unique(df$county_cur), NA)) < 64) ## not every county
 assert_that(length(setdiff(unique(df$county_rtn), NA)) == 64)
 assert_that(length(setdiff(unique(df$county_blt), NA)) == 64)
 
+# Note: reran with new joined file--all are true. 
+
 ## Removing some redundant variables -------------------------------------------
 # Each county code corresponds to a unique county. There is already a county 
 # Column, so it might be redundant to have both. 
@@ -108,7 +110,8 @@ sum(!is.na(df$in_person_vote_date_main))
 
 # Pulling out the relevant columns
 df_new <- df %>%
-  select(contains("_main"), voter_id, file)
+  select(contains("_main"), voter_id, contains("file"), residential_address,
+         street_name, house_num)
 
 # Removing columns with too many missing values (>95% missing)
 # df_new <- filter_missing(df_new)
@@ -148,6 +151,24 @@ prop(df_cleaned, "gender")
 # three distinct values (mail, in person paper, or in person electronic)
 prop(df_cleaned, "vote_method")
 assert_that(length(unique(df_cleaned$county)) == 64)
+# Something is wrong: 
+unique(df_cleaned$county)
+# Extra counties: "el", "la", "san". Names are incomplete. 
+df_cleaned %>%
+  filter(county %in% c("el", "la", "san"))
+
+# Impute from election name:
+ df_cleaned <- df_cleaned %>%
+   mutate(county = case_when(
+     county %in% "el" ~ word(election_name, 2, 3),
+     county %in% "la" ~ word(election_name, 2, 3),
+     county %in% "san" ~ word(election_name, 2, 3),
+     TRUE ~ county
+   ))
+ 
+# Check again: 
+assert_that(length(unique(df_cleaned$county)) == 64)
+# Awesome, it works!
 
 # Wrangle NA values: recoding gender ===========================================
 df_cleaned <- df_cleaned %>%
