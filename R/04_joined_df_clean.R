@@ -19,8 +19,8 @@ assert_that(length(setdiff(unique(df$county_rtn), NA)) == 64)
 assert_that(length(setdiff(unique(df$county_blt), NA)) == 64)
 
 ## Removing some redundant variables -------------------------------------------
-# Each county code corresponds to a unique county. There is already a county 
-# Column, so it might be redundant to have both. 
+# Each county code corresponds to a unique county. There is already a county
+# Column, so it might be redundant to have both.
 
 df <- df %>%
   select(-c(county_code))
@@ -40,42 +40,44 @@ for (i in x) {
 # Some checks to make sure the main columns are filled properly ================
 df %>%
   select(contains("main")) %>%
-  map(~sum(is.na(.))) # It is concerning that county has missing values. 
+  map(~ sum(is.na(.))) # It is concerning that county has missing values.
 
-# Table to make sure we can impute from an alternate column. 
+# Table to make sure we can impute from an alternate column.
 table(is.na(df$election_name_main), is.na(df$county_main)) # election_name has
-# no missing values when county has missing values. 
+# no missing values when county has missing values.
 
-# Fix: 
+# Fix:
 df <- df %>%
-  mutate(county_main = case_when(
-    is.na(county_main) ~ word(election_name_main, 2),
-    TRUE ~ county_main
-    )) 
+  mutate(
+    county_main = case_when(
+      is.na(county_main) ~ word(election_name_main, 2),
+      TRUE ~ county_main
+    )
+  )
 
-# Making sure it worked: 
-sum(is.na(df$county_main)) # Yes.  
+# Making sure it worked:
+sum(is.na(df$county_main)) # Yes.
 
 
 ## Combining residential_zip_code, and residential_zip_code_plus ---------------
 ## to make one zip with the code, and geographic segment
 
-# First checking the variable options for the aggregation: 
+# First checking the variable options for the aggregation:
 df %>%
   select(contains("zip")) %>%
   names()
 
-# Using res_zip, and residential_zip_code, 
+# Using res_zip, and residential_zip_code,
 df <- df %>%
   mutate(
     residential_zip_main = case_when(
-      !is.na(residential_zip_plus) & is.na(res_zip) & 
+      !is.na(residential_zip_plus) & is.na(res_zip) &
         !is.na(residential_zip_code) ~ paste(
         residential_zip_code, residential_zip_plus,
         sep = "-"
-      ), 
+      ),
       !is.na(residential_zip_plus) & is.na(residential_zip_code) &
-      !is.na(res_zip) ~ paste(
+        !is.na(res_zip) ~ paste(
         res_zip, residential_zip_plus,
         sep = "-"
       ),
@@ -95,16 +97,18 @@ df <- df %>%
   ) %>%
   select(-c(middle_name, middle_name_blt, middle_name_rtn))
 
-## In person vote date is an important variable, with a lot of missing values, 
-## attempting to fix it. 
+## In person vote date is an important variable, with a lot of missing values,
+## attempting to fix it.
 df <- df %>%
-  mutate(in_person_vote_date_main = coalesce(in_person_vote_date,
-                                             in_person_vote_date_rtn)) 
+  mutate(in_person_vote_date_main = coalesce(
+    in_person_vote_date,
+    in_person_vote_date_rtn
+  ))
 
 sum(!is.na(df$in_person_vote_date_main))
 # [1] 197945
-# Even after the coalesce, there aren't many. However, keeping the variable, 
-# in case of future need. 
+# Even after the coalesce, there aren't many. However, keeping the variable,
+# in case of future need.
 
 # Pulling out the relevant columns
 df_new <- df %>%
