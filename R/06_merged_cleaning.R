@@ -1,5 +1,6 @@
 source(here::here("R", "utilities.R"))
 load(here("data/tidy/df_joined_tidy.RData"))
+
 if (nrows == 100) {
   load(here("data/tidy/full_history_long_sample.RData"))
   out <- voter_history_long
@@ -14,20 +15,6 @@ out <- out %>%
   mutate(voter_id = as.character(voter_id)) %>%
   filter(election_year >+ 2016)
 
-# out <- out %>%
-#   mutate(election_date = case_when(
-#     str_detect(out$history_file, "^Master.*_[0-9]{2}.txt$") &
-#       election_date == "1900-01-01" ~
-#       mdy(str_extract(history_file, "[0-9]{2}_[0-9]{2}_[0-9]{4}")),
-#     str_detect(history_file, "^Master.*[0-9]{4}.txt$") &
-#       election_date == "1900-01-01" ~
-#       mdy(str_extract(history_file, "[0-9]{8}")),
-#     str_detect(history_file, "^EX.*") &
-#       election_date == "1900-01-01" ~
-#       as.Date(str_extract(history_file, "[0-9]{4}"), format = "%Y"),
-#     TRUE ~ election_date
-#   )) 
-
 out <- out %>%
   mutate(
     across(c("election_type", "voting_method", "party", "county_name"), tolower)
@@ -41,7 +28,7 @@ out <- out %>%
   ) %>%
   select(-c(election_year, election_description)) %>%
   # Fixing the history file column
-  mutate(history_file = word(history_file, -1, sep = fixed("/"))) 
+  mutate(history_file = word(history_file, -1, sep = "/"))
 
 # Selecting relevant variables from df_cleaned:
 df_cleaned <- df_cleaned %>%
