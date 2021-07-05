@@ -1,5 +1,4 @@
 source(here::here("R", "utilities.R"))
-load(here("data/tidy/df_joined_tidy.RData"))
 
 if (nrows == 100) {
   out <- loadRData(here("data/tidy/full_history_long_sample.RData"))
@@ -12,7 +11,8 @@ out <- out %>%
   mutate(election_date = mdy(election_date)) %>%
   mutate(election_year = year(election_date)) %>%
   mutate(voter_id = as.character(voter_id)) %>%
-  filter(election_year >+ 2016)
+  filter(election_year >+ 2014) %>%
+  filter(election_year %% 2 == 0)
 
 voter_history_long <- out %>%
   mutate(
@@ -31,6 +31,39 @@ voter_history_long <- out %>%
   # Fixing the history file column
   # `word` approach is good but too memory-exhaustive
   # mutate(history_file = word(history_file, -1, sep = "/"))
+
+# Recoding voting methods ======================================================
+prop(voter_history_long, "voting_method", sort = TRUE)
+
+## Direct Recording Electronic (DRE)
+mail <- c("mail ballot", "absentee mail", "mail ballot - dre", "absentee carry")
+in_person <- c(
+  "polling place", "in person", "early voting - dre", "early voting",
+  "in person - dre", "vote center", "vote center - dre"
+)
+
+voter_history_long <- voter_history_long %>%
+  mutate(
+    election_type = recode(
+      election_type,
+      general = "gen",
+      primary = "pri",
+      .default = "oth"
+    ),
+    vote_method = case_when(
+      voting_method %in% mail ~ 0,
+      voting_method %in% in_person ~ 1,
+      TRUE ~ NA_real_
+    )
+  )
+
+# Column to aggregate election by year =========================================
+# (removing county-level dependency for the wide pivot)
+voter_history_long <- voter_history_long %>%
+  mutate(election = str_c(election_type, year(election_date)))
+
+# Final output
+head(voter_history_long) %>% select(-history_file)
 
 if (nrows == 100) {
   save(
