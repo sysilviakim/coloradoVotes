@@ -51,7 +51,6 @@ for (i in 1:length(file_list)) {
   message(paste0("File import complete for ", names(file_list)[i], "."))
 }
 out <- list.rbind(out)
-save(out, file = here("data", "tidy", "full_history_raw.Rda"))
 
 # The primary file was the only one with a different set of variables, so
 # loading that in separately to format before merging
@@ -96,10 +95,9 @@ out %>%
 
 ## [1] 3280141; it is a little over 10k off, but seems pretty close. 
 
-out %>% 
-  sample_n(10000) %>% 
-  save(., file = here("data", "tidy", "full_history_long_sample.RData"))
+set.seed(123)
+out_sample <- out %>% 
+  sample_n(10000)
+save(out_sample, file = here("data", "tidy", "full_history_long_sample.RData"))
 
 write_fst(out, here("data", "tidy", "full_history_long.fst"))
-
-
