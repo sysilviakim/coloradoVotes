@@ -2,8 +2,7 @@ source(here::here("R", "utilities.R"))
 load(here("data/tidy/df_joined_tidy.RData"))
 
 if (nrows == 100) {
-  load(here("data/tidy/full_history_long_sample.RData"))
-  out <- voter_history_long
+  out <- loadRData(here("data/tidy/full_history_long_sample.RData"))
 } else {
   out <- read_fst(here("data", "tidy", "full_history_long.fst"))
 }
@@ -15,7 +14,7 @@ out <- out %>%
   mutate(voter_id = as.character(voter_id)) %>%
   filter(election_year >+ 2016)
 
-out <- out %>%
+voter_history_long <- out %>%
   mutate(
     across(c("election_type", "voting_method", "party", "county_name"), tolower)
   ) %>%
@@ -27,25 +26,11 @@ out <- out %>%
     )
   ) %>%
   select(-c(election_year, election_description)) %>%
+  # Send file info to the back
+  select(-history_file, everything())
   # Fixing the history file column
-  mutate(history_file = word(history_file, -1, sep = "/"))
-
-# Selecting relevant variables from df_cleaned:
-df_cleaned <- df_cleaned %>%
-  rename(
-    history_file = file,
-    voting_method = vote_method,
-    county_name = county
-  ) 
-
-# CHeck common variables: 
-intersect(colnames(df_cleaned), colnames(out))
-
-# Adjust accordingly 
-voter_info <- df_cleaned %>%
-  select(-c(party, election_type, election_date, ballot_style))
-
-voter_history_long <- inner_join(df_cleaned, out)
+  # `word` approach is good but too memory-exhaustive
+  # mutate(history_file = word(history_file, -1, sep = "/"))
 
 if (nrows == 100) {
   save(
