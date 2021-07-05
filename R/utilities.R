@@ -9,6 +9,7 @@ library(fst)
 library(styler)
 library(Kmisc)
 library(rlist)
+library(tidymodels)
 
 # Other setups =================================================================
 if (Sys.info()["sysname"] == "Windows") {

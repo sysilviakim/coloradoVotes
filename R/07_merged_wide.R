@@ -5,6 +5,9 @@ if (nrows == 100) {
   load(here("data/tidy/voter_history_long_full.RData"))
 }
 
+voter_history_long <-
+  read_fst("data/tidy/sample/voter_history_long_full_hpc.fst")
+
 # Recoding party/gender ========================================================
 voter_history_long %>%
   select(gender, county_name, election_type, party, voting_method) %>%

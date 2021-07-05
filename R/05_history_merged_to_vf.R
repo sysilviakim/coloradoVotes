@@ -38,6 +38,7 @@ files_df <- file_list %>%
 map(seq(10), check_loop)
 # No false values were returned from assert that. It seems like the loop works.
 
+# Import history file in a loop ================================================
 out <- vector("list", length(file_list))
 for (i in 1:length(file_list)) {
   out[[i]] <- file_list[[i]] %>%
@@ -47,11 +48,10 @@ for (i in 1:length(file_list)) {
       .id = "history_file"
     ) %>%
     clean_names()
+  message(paste0("File import complete for ", names(file_list)[i], "."))
 }
-save(out, file = here("data", "tidy", "full_history_list.Rda"))
-
-# Put them together
 out <- list.rbind(out)
+save(out, file = here("data", "tidy", "full_history_raw.Rda"))
 
 # The primary file was the only one with a different set of variables, so
 # loading that in separately to format before merging
@@ -96,4 +96,10 @@ out %>%
 
 ## [1] 3280141; it is a little over 10k off, but seems pretty close. 
 
+out %>% 
+  sample_n(10000) %>% 
+  save(., file = here("data", "tidy", "full_history_long_sample.RData"))
+
 write_fst(out, here("data", "tidy", "full_history_long.fst"))
+
+

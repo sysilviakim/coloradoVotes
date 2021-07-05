@@ -92,11 +92,19 @@ prop.table(table(vote_rose$gen2020))
 # 0         1 
 # 0.4769776 0.5230224 
 
+# SMOTE;
+vote_smote <- smote(gen2020~., vote_train, perc.over = 1, perc.under = 2)
+
+prop.table(table(vote_smote$gen2020))
+# 0   1 
+# 0.5 0.5 
+
 # Fit different models: 
 model_under <- fit(log_wf, data = vote_under)
 model_over <- fit(log_wf, data = vote_over)
 model_both <- fit(log_wf, data = vote_both)
 model_rose <- fit(log_wf, data = vote_rose)
+model_smote <- fit(log_wf, data = vote_smote)
 
 # Area under ROCs: 
 predict_1 <- augment(model_under, vote_test) %>%
@@ -119,7 +127,12 @@ predict_4 <- augment(model_rose, vote_test) %>%
 roc.curve(vote_test$gen2020, predict_4)
 # Area under the curve (AUC): 0.627
 
-# They aren't that better than the initial model. 
+predict_4 <- augment(model_smote, vote_test) %>%
+  pull(.pred_1)
+roc.curve(vote_test$gen2020, predict_4)
+# Area under the curve (AUC): 0.626
+
+# They aren't that better than the initial model--0.627 is very low. 
 
 
 

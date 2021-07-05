@@ -9,11 +9,11 @@ if (nrows == 100) {
 }
 
 # Create switchers (init. code) ================================================
-df <- voter_history_wide %>%
+df <- wide_profile_temp %>%
   select(
     voter_id, gen2020, pri2020, gen2018, pri2018,
     gen2016, pri2016, gen2014, pri2014,
-    zip = residential_zip, party, county = county_name
+    zip = residential_zip, party, county
   ) %>%
   arrange(desc(gen2020), voter_id) %>%
   mutate(
@@ -86,6 +86,16 @@ full_msm <- msm(
   qmatrix = init
 )
 
+pre2020_msm <- msm(
+  state ~ year,
+  subject = voter_id,
+  data = hist_long %>% filter(year <= 18),
+  method = "BFGS",
+  control = list(fnscale = 4000, maxit = 10000),
+  covariates = ~ party + type,
+  qmatrix = init
+)
+
 recent_msm <- msm(
   state ~ year,
   subject = voter_id,
@@ -97,27 +107,8 @@ recent_msm <- msm(
 )
 
 pmatrix.msm(full_msm)
-#                 Mail   In-person  Nonvoter
-# Mail      0.45584834 0.009075291 0.5350764
-# In-person 0.10544881 0.015974429 0.8785768
-# Nonvoter  0.06329851 0.016749392 0.9199521
-# t1 not doing anything?
-
 pmatrix.msm(full_msm, covariates = list(party = "rep", type = "gen"))
-#                 Mail   In-person  Nonvoter
-# Mail      0.40395035 0.006190545 0.5898591
-# In-person 0.15819469 0.023048500 0.8187568
-# Nonvoter  0.08877164 0.003635028 0.9075933
-# Not actually changing with covariate entry
-
 pmatrix.msm(recent_msm)
-#                 Mail  In-person  Nonvoter
-# Mail      0.37614040 0.01741858 0.6064410
-# In-person 0.37830716 0.01812703 0.6035658
-# Nonvoter  0.06444978 0.01204890 0.9235013
-
 pmatrix.msm(recent_msm, covariates = list(party = "rep", type = "gen"))
-#                Mail  In-person  Nonvoter
-# Mail      0.4912323 0.01308536 0.4956824
-# In-person 0.3158993 0.07486229 0.6092384
-# Nonvoter  0.1484463 0.01450197 0.8370517
+pmatrix.msm(pre2020_msm)
+pmatrix.msm(pre2020_msm, covariates = list(party = "rep", type = "gen"))
