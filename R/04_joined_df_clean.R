@@ -136,12 +136,12 @@ df_cleaned <- df_new %>%
     party = recode(
       party,
       dem = "democrat",
+      dem = "democratic",
       rep = "republican",
       uaf = "unaffiliated",
       lbr = "libertarian",
       acn = "american constitution",
       grn = "green",
-      uni = "unaffiliated",
       apv = "approval"
     )
   )
