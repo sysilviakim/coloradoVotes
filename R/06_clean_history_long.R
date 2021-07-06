@@ -1,7 +1,8 @@
 source(here::here("R", "utilities.R"))
 
 if (nrows == 100) {
-  out <- loadRData(here("data/tidy/full_history_long_sample.RData"))
+  out <-
+    loadRData(here("data", "tidy", "sample", "full_history_long_sample.RData"))
 } else {
   out <- read_fst(here("data", "tidy", "full_history_long.fst"))
 }

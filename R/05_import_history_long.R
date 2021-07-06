@@ -97,6 +97,10 @@ out %>%
 set.seed(123)
 out_sample <- out %>% 
   sample_n(10000)
-save(out_sample, file = here("data", "tidy", "full_history_long_sample.RData"))
+
+save(
+  out_sample,
+  file = here("data", "tidy", "sample", "full_history_long_sample.RData")
+)
 
 write_fst(out, here("data", "tidy", "full_history_long.fst"))
