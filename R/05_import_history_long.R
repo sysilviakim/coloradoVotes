@@ -1,5 +1,4 @@
 source(here::here("R", "utilities.R"))
-load(here("data/tidy/df_joined_tidy.RData"))
 
 # First find all directories + list files in each directory with pattern =======
 ## Intentionally not using here package
