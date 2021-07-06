@@ -43,13 +43,7 @@ df <- inner_join(
 df %>% filter(county_hist != county | party_hist != party) %>% nrow() ## 1.4%
 
 if (nrows == 100) {
-  save(
-    voter_history_wide,
-    file = here("data", "tidy", "sample", "merged_sample.RData")
-  )
+  save(df, file = here("data", "tidy", "sample", "merged_sample.RData"))
 } else {
-  save(
-    voter_history_wide,
-    file = here("data", "tidy", "merged_full.RData")
-  )
+  save(df, file = here("data", "tidy", "merged_full.RData"))
 }

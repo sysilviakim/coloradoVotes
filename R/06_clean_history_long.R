@@ -51,8 +51,9 @@ voter_history_long <- voter_history_long %>%
       .default = "oth"
     ),
     vote_method = case_when(
-      voting_method %in% mail ~ 0,
-      voting_method %in% in_person ~ 1,
+      ## eventually, 0 = did not vote, 1 = mail, 2 = vote in person
+      voting_method %in% mail ~ 1,
+      voting_method %in% in_person ~ 2,
       TRUE ~ NA_real_
     )
   )

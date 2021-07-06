@@ -51,6 +51,17 @@ for (i in seq(length(wide_list))) {
 
 # Regroup into single dataframe, resolve duplicates ============================
 voter_history_wide <- voter_history_wide %>% bind_rows()
+if (nrows == 100) {
+  save(
+    voter_history_wide,
+    file = here("data", "tidy", "sample", "hist_dups_sample.RData")
+  )
+} else {
+  save(
+    voter_history_wide,
+    file = here("data", "tidy", "hist_dups_full.RData")
+  )
+}
 
 ## resolve duplicate IDs by merging records: voters who moved across counties
 temp <- voter_history_wide %>%
@@ -63,6 +74,8 @@ temp <- voter_history_wide %>%
   slice(n())
 
 assert_that(!any(duplicated(temp$voter_id)))
+assert_that(length(unique(temp$gen2020)) == 3)
+voter_history_wide <- temp
 
 if (nrows == 100) {
   save(
