@@ -18,21 +18,21 @@ assert_that(length(setdiff(unique(df$county_cur), NA)) < 64) ## not every county
 assert_that(length(setdiff(unique(df$county_rtn), NA)) == 64)
 assert_that(length(setdiff(unique(df$county_blt), NA)) == 64)
 
-## Removing some redundant variables 
+## Removing some redundant variables
 df <- df %>%
   select(-c(county_code, status_code))
 
-## Fixing discrepancy 
+## Fixing discrepancy
 ## Variables simple enough to be fixed using the fix_discrepancy function
 x <- c(
   "first_name", "last_name", "yob", "gender", "party",
   "preference", "phone", "ballot_style", "vote_method", "county",
-  "election_name", 
+  "election_name",
   ## revive variables initially not included
   "congressional", "state_senate", "state_house",
   "residential_address", "residential_city", "residential_state",
   "residential_zip_code",
-  "status", "status_reason", "registration_date", 
+  "status", "status_reason", "registration_date",
   "in_person_vote_date", "permanent_mail_in_voter"
 )
 
@@ -54,7 +54,14 @@ table(is.na(df$election_name_main), is.na(df$county_main)) # election_name has
 df <- df %>%
   mutate(
     county_main = case_when(
-      is.na(county_main) ~ word(election_name_main, 2),
+      ## word(election_name_main, 2): problem with this approach
+      ## counties like el paso
+      is.na(county_main) ~ trimws(
+        gsub(
+          "\\s+", " ",
+          gsub("[0-9]|county ([a-z]+) election", "", election_name_main)
+        )
+      ),
       TRUE ~ county_main
     )
   )
