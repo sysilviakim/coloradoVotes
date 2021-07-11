@@ -1,31 +1,29 @@
 source(here::here("R", "utilities.R"))
 
-# Import data, depending on the user ===========================================
+# Import data ==================================================================
 if (nrows == -1) {
   df_raw <- df <- read_fst(here("data/tidy/joined_full.fst"))
 } else {
   df_raw <- df <- loadRData(here("data/tidy/sample/joined_sample_10k.RData"))
 }
 
-# Cleaning the data ============================================================
+# Fixing discrepancies =========================================================
 # [CHECK EACH VARIABLE HERE]
 temp <- filter_missing(df_raw)
 
-## County ----------------------------------------------------------------------
+## County sanity check
 assert_that(length(setdiff(unique(df$county_code), NA)) == 64)
 assert_that(length(setdiff(unique(df$county), NA)) == 64)
 assert_that(length(setdiff(unique(df$county_cur), NA)) < 64) ## not every county
 assert_that(length(setdiff(unique(df$county_rtn), NA)) == 64)
 assert_that(length(setdiff(unique(df$county_blt), NA)) == 64)
 
-## Removing some redundant variables -------------------------------------------
-# Each county code corresponds to a unique county. There is already a county
-# Column, so it might be redundant to have both.
-
+## Removing some redundant variables 
 df <- df %>%
-  select(-c(county_code))
+  select(-c(county_code, status_code))
 
-## Variables simple enough to be fixed using the fix_discrepancy function ------
+## Fixing discrepancy 
+## Variables simple enough to be fixed using the fix_discrepancy function
 x <- c(
   "first_name", "last_name", "yob", "gender", "party",
   "preference", "phone", "ballot_style", "vote_method", "county",
@@ -43,7 +41,7 @@ for (i in x) {
   df <- fix_discrepancy(df, i, str_c(i, "_main"))
 }
 
-# Some checks to make sure the main columns are filled properly ================
+# Check main columns filled ====================================================
 df %>%
   select(contains("main")) %>%
   map(~ sum(is.na(.))) # It is concerning that county has missing values.
@@ -62,8 +60,7 @@ df <- df %>%
   )
 
 # Making sure it worked:
-sum(is.na(df$county_main)) # Yes.
-
+assert_that(!any(is.na(df$county_main)))
 
 ## Combining residential_zip_code, and residential_zip_code_plus ---------------
 ## to make one zip with the code, and geographic segment
@@ -134,7 +131,7 @@ colnames(df_new) <- gsub("_main", "", colnames(df_new))
 df_new$election_type <- "general"
 df_new$election_date <- mdy(11032020)
 
-# Making sure some important columns are in place before saving it =============
+# Check key columns in place ===================================================
 # Abbreviations mixed with full
 unique(df_new$party)
 
