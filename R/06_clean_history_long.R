@@ -12,7 +12,7 @@ out <- out %>%
   mutate(election_date = mdy(election_date)) %>%
   mutate(election_year = year(election_date)) %>%
   mutate(voter_id = as.character(voter_id)) %>%
-  filter(election_year >+ 2014) %>%
+  filter(election_year >= 2014) %>%
   filter(election_year %% 2 == 0)
 
 voter_history_long <- out %>%
