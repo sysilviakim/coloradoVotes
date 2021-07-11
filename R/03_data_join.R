@@ -69,5 +69,5 @@ if (nrows == -1) {
 } else {
   set.seed(123)
   df <- df %>% sample_n(10000)
-  save(df, file = here("data/tidy/joined_sample_10k.RData"))
+  save(df, file = here("data/tidy/sample/joined_sample_10k.RData"))
 }

@@ -4,7 +4,7 @@ source(here::here("R", "utilities.R"))
 if (nrows == -1) {
   df_raw <- df <- read_fst(here("data/tidy/joined_full.fst"))
 } else {
-  df_raw <- df <- read_fst(here("data/tidy/joined_sample_10k.fst"))
+  df_raw <- df <- loadRData(here("data/tidy/sample/joined_sample_10k.RData"))
 }
 
 # Cleaning the data ============================================================
@@ -29,7 +29,13 @@ df <- df %>%
 x <- c(
   "first_name", "last_name", "yob", "gender", "party",
   "preference", "phone", "ballot_style", "vote_method", "county",
-  "election_name"
+  "election_name", 
+  ## revive variables initially not included
+  "congressional", "state_senate", "state_house",
+  "residential_address", "residential_city", "residential_state",
+  "residential_zip_code",
+  "status", "status_reason", "registration_date", 
+  "in_person_vote_date", "permanent_mail_in_voter"
 )
 
 # Looping the process
@@ -100,10 +106,12 @@ df <- df %>%
 ## In person vote date is an important variable, with a lot of missing values,
 ## attempting to fix it.
 df <- df %>%
-  mutate(in_person_vote_date_main = coalesce(
-    in_person_vote_date,
-    in_person_vote_date_rtn
-  ))
+  mutate(
+    in_person_vote_date_main = coalesce(
+      in_person_vote_date,
+      in_person_vote_date_rtn
+    )
+  )
 
 sum(!is.na(df$in_person_vote_date_main))
 # [1] 197945
@@ -112,7 +120,7 @@ sum(!is.na(df$in_person_vote_date_main))
 
 # Pulling out the relevant columns
 df_new <- df %>%
-  select(contains("_main"), voter_id, file)
+  select(contains("_main"), voter_id, contains("file"))
 
 # Removing columns with too many missing values (>95% missing)
 # df_new <- filter_missing(df_new)
@@ -158,4 +166,8 @@ df_cleaned <- df_cleaned %>%
   mutate(gender = na_if(gender, "unknown"))
 
 # Saving cleaned data (16 columns) =============================================
-save(df_cleaned, file = here("data/tidy/df_joined_tidy.RData"))
+if (nrows == -1) {
+  save(df_cleaned, file = here("data/tidy/df_joined_tidy.RData"))
+} else {
+  save(df_cleaned, file = here("data/tidy/sample/df_joined_tidy_sample.RData"))
+}
