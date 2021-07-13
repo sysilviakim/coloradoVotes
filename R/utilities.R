@@ -13,6 +13,7 @@ library(tidymodels)
 
 # Other setups =================================================================
 if (Sys.info()["sysname"] == "Windows") {
+  # nrows <- 100
   nrows <- -1
 } else {
   nrows <- 100
