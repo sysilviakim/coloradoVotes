@@ -90,7 +90,7 @@ filter_missing <- function(df) {
     mutate(prop_missing = missing / nrow(df) * 100) %>%
     filter(prop_missing > 95)
   df_filtered <- df %>%
-    select(-contains(missing$variable)) 
+    select(-contains(missing$variable))
   message(paste0("Deleted variables: ", missing$variable, "\n"))
   return(df_filtered)
 }
@@ -102,9 +102,9 @@ outersect <- function(x, y) {
   sort(c(setdiff(x, y), setdiff(y, x)))
 }
 
-# A function to use to check if the merge loop is working: 
-check_loop <- function(i) {  
-  for (i in file_list[i]) {  
+# A function to use to check if the merge loop is working:
+check_loop <- function(i) {
+  for (i in file_list[i]) {
     out <- i %>%
       set_names(.) %>%
       map_dfr(
@@ -112,7 +112,7 @@ check_loop <- function(i) {
         .id = "history_file"
       ) %>%
       clean_names()
-    assert_that(nrow(out)/10 == length(file_list[i]))
+    assert_that(nrow(out) / 10 == length(file_list[i]))
   }
 }
 
@@ -129,9 +129,9 @@ pretty_condprob <- function(df, A_var, A_val, B_var, B_val,
     message(
       paste0(
         "Cond. on ", B_var, " == ", B_val, ", Pr(",
-        A_var, " == ", A_val, ") is ", 
+        A_var, " == ", A_val, ") is ",
         ifelse(
-          percent == TRUE, 
+          percent == TRUE,
           paste0(round(nrow(A) / nrow(B) * 100, digits = digits), "%"),
           round(nrow(A) / nrow(B), digits = digits)
         )
