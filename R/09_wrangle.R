@@ -39,12 +39,13 @@ if (!file.exists(fname)) {
 ## Finally, collapse counties
 temp <- table(df$county)
 temp <- sort(temp)
+temp
 
 df <- df %>%
   rename(county_full = county) %>%
   mutate(
     county = case_when(
-      county_full %in% names(temp)[which(temp < 10000)] ~ "others",
+      county_full %in% names(temp)[which(temp < 20000)] ~ "others",
       TRUE ~ county_full
     )
   )
