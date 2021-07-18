@@ -54,8 +54,8 @@
       "RemoteRepo": "Kmisc",
       "RemoteUsername": "sysilviakim",
       "RemoteRef": "HEAD",
-      "RemoteSha": "38344ade4489802efecf3bb7a2a674ff08bc80e2",
-      "Hash": "f06142a591515902df2eb86c8e3d45bd"
+      "RemoteSha": "b85ccb20505f80733cdb460d8f02bfff30bd16eb",
+      "Hash": "b3efa0f3235ff23c8ae6b0ae9d1ce4ec"
     },
     "MASS": {
       "Package": "MASS",
@@ -119,13 +119,6 @@
       "Source": "Repository",
       "Repository": "CRAN",
       "Hash": "e031418365a7f7a766181ab5a41a5716"
-    },
-    "ROSE": {
-      "Package": "ROSE",
-      "Version": "0.0-4",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Hash": "c6e79999925f0db3f2d88b187d014bf8"
     },
     "RSelenium": {
       "Package": "RSelenium",
@@ -455,6 +448,13 @@
       "Source": "Repository",
       "Repository": "CRAN",
       "Hash": "f25fad6bee82b7ab01f055e2d813b96f"
+    },
+    "gbm": {
+      "Package": "gbm",
+      "Version": "2.1.8",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "158310c26916971b3d3d1a97937588cc"
     },
     "generics": {
       "Package": "generics",
@@ -1102,10 +1102,10 @@
     },
     "utf8": {
       "Package": "utf8",
-      "Version": "1.1.4",
+      "Version": "1.2.1",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "4a5081acfb7b81a572e4384a7aaf2af1"
+      "Hash": "c3ad47dc6da0751f18ed53c4613e3ac7"
     },
     "vctrs": {
       "Package": "vctrs",
