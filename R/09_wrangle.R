@@ -1,7 +1,7 @@
 source(here::here("R", "utilities.R"))
 library(nnet)
 library(caret)
-fname <- here("data", "tidy", "multinom.Rda")
+fname <- here("data", "tidy", "multiclass.Rda")
 
 # Import merged/wrangled data ==================================================
 if (!file.exists(fname)) {
@@ -50,7 +50,7 @@ df <- df %>%
     )
   )
 
-fname <- here("data", "tidy", "multinom_county_collapsed.Rda")
+fname <- here("data", "tidy", "multiclass_county_collapsed.Rda")
 if (nrows == 100) {
   save(df, file = gsub(".Rda", "_sample.Rda", fname))
 } else {
