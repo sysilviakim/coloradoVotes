@@ -140,6 +140,90 @@ pretty_condprob <- function(df, A_var, A_val, B_var, B_val,
   }
 }
 
+multiclass_train_prep <- function(df, class = 3, y = "gen2020") {
+  tc <- trainControl(
+    method = "cv", number = 10,
+    summaryFunction = ifelse(class > 2, multiClassSummary, twoClassSummary),
+    allowParallel = TRUE, verboseIter = FALSE, seeds = rep_seeds(),
+    classProbs = TRUE, savePredictions = TRUE
+  )
+  
+  df <- df %>% mutate(across(where(is.factor), as.character))
+  df[df == "In person"] <- "In_person"
+  df[df == "Not voted"] <- "Not_voted"
+  
+  ## Train-test split
+  set.seed(123)
+  x <- createDataPartition(df[[y]], p = 0.8, list = FALSE)
+  training <- df[x, ] %>% mutate(!!as.name(y) := factor(!!as.name(y)))
+  test <- df[-x, ] %>% mutate(!!as.name(y) := factor(!!as.name(y)))
+  return(list(train = training, test = test, tc = tc))
+}
+
+pred_df <- function(list, model, y = "gen2020") {
+  list$test$pred <- predict.train(model, newdata = list$test)
+  table(list$test$pred)
+  confusionMatrix(data = list$test$pred, reference = list$test[[y]])
+  temp <- list$test %>%
+    select(obs = !!as.name(y), pred = pred) %>%
+    bind_cols(., predict.train(model, newdata = list$test, type = "prob"))
+  temp <- as.data.frame(temp) ## If tibble, levels(temp[, "pred"]) does not work
+  return(temp)
+}
+
+## caret::underSample only allows for 1:1:1 for minority classes
+## ROSE::ovun.sample cannot handle more than 2 classes
+## Manually downsampling mail voters to 25%
+
+downSample_custom <- function(list, p = .5, majority = "Mail", y = "gen2020") {
+  set.seed(123)
+  list$traind <- list$train %>%
+    filter(!!as.name(y) == majority) %>%
+    sample_frac(size = p) %>%
+    bind_rows(., list$train %>% filter(!!as.name(y) != majority))
+  return(list)
+}
+
+ternary_extra <- function(p) {
+  p <- p +
+    labs(color = "Outcome", shape = "Year") +
+    xlab("No Turnout") +
+    ylab("Mail") +
+    zlab("In Person") +
+    theme_bw() +
+    theme_arrownormal() +
+    geom_line(aes(group = county), size = 0.2, alpha = 0.1) +
+    scale_color_brewer(palette = "Set1", direction = -1) +
+    annotate(
+      geom = "text",
+      x = c(0.45, 0.1),
+      y = c(0.45, 0.45),
+      z = c(0.1, 0.45),
+      label = c("No Turnout", "In Person"),
+      family = "CM Roman"
+    )
+  return(p)
+}
+
+county_summ <- function(df, group = "winner") {
+  df %>%
+    filter(year == 2020) %>%
+    mutate(
+      two_modes = in_person / (mail + in_person) * 100,
+      sum = not_voted + mail + in_person,
+      not_voted = not_voted / sum * 100,
+      mail = mail / sum * 100,
+      in_person = in_person / sum * 100
+    ) %>%
+    group_by(!!as.name(group)) %>%
+    summarise(
+      two_modes = formatC(mean(two_modes), format = "f", digits = 1),
+      in_person = formatC(mean(in_person), format = "f", digits = 1),
+      mail = formatC(mean(mail), format = "f", digits = 1),
+      not_voted = formatC(mean(not_voted), format = "f", digits = 1),
+    )
+}
+
 # Define file directory ========================================================
 # Need relative paths so not here::here
 file_paths <- list(
