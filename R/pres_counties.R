@@ -28,3 +28,17 @@ pres_wide <- pres %>%
   mutate(county = tolower(county))
 
 save(pres_wide, file = here("data", "tidy", "co_county_pres_wide.Rda"))
+
+pres_wide %>%
+  filter(year == 2016) %>%
+  group_by(county) %>%
+  mutate(winner = ifelse(dem > rep, "dem", "rep")) %>%
+  .$winner %>%
+  table()
+
+pres_wide %>% 
+  group_by(county, year) %>%
+  mutate(winner = ifelse(dem > rep, "dem", "rep")) %>%
+  select(county, year, winner) %>%
+  pivot_wider(names_from = year, values_from = winner) %>%
+  filter(`2016` != `2020`)
