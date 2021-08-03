@@ -6,27 +6,27 @@ orig <- loadRData(here("data", "tidy", "multiclass_complete.Rda"))
 df <- orig %>% select(-county, -in_person_vote_date)
 assert_that(!any(is.na(df)))
 
-prop(
-  df %>%
-    mutate(
-      party = as.character(party),
-      party = case_when(party == "dem" | party == "rep" ~ party, TRUE ~ "oth")
-    ),
-  c("gen2020", "party")
-)
+# prop(
+#   df %>%
+#     mutate(
+#       party = as.character(party),
+#       party = case_when(party == "dem" | party == "rep" ~ party, TRUE ~ "oth")
+#     ),
+#   c("gen2020", "party")
+# )
 
 # Setup: downsampling ==========================================================
 t1 <- multiclass_train_prep(df)
-t2 <- downSample_custom(t1, p = 0.10)
+t2 <- downSample_custom(t1, p = 0.2)
 dim(t2$traind)
 prop(t2$traind, "gen2020")
-fname <- here("output", "gbm_caret_prAUC_downsample_10.Rda")
+fname <- here("output", "ranger_caret_prAUC_downsample_20.Rda")
 
 # Run model (or export) ========================================================
 if (!file.exists(fname)) {
   model_down <- train(
     gen2020 ~ .,
-    data = t2$traind, trControl = t2$tc, method = "gbm", metric = "prAUC"
+    data = t2$traind, trControl = t2$tc, method = "ranger", metric = "prAUC"
   )
   save(model_down, file = fname)
 } else {
