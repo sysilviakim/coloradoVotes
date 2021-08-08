@@ -63,13 +63,13 @@ primary_history <- read.table(
   mutate(voted_party = na_if(voted_party, ""),
          received_party_ballot = na_if(received_party_ballot, ""))
 
-df_joined <- left_join(df, primary_history, by = "voter_id")
+df_temp <- left_join(df, primary_history, by = "voter_id")
 
 # Create a column with leanings: 
 # Leanings are imputed from: 
 # - Party voted for (priority)
 # - Party of the ballot they recieved (if party voted for is not available)
-df_test <- df_joined %>%
+df_test <- df_temp %>%
   mutate(party_test = case_when(
     party %in% "oth" & !is.na(voted_party) ~ voted_party,
     party %in% "oth" & is.na(voted_party) & !is.na(received_party_ballot) ~ 
@@ -91,6 +91,56 @@ table(df_test$party_test)/nrow(df_test)
 # dem       oth       rep 
 # 0.4218437 0.1913828 0.3867735 
 # Seems to work! 
+
+# Add challenged/rejected column -----------------------------------------------
+# Based on the name, and the lack of a column that tells if they were cured or 
+# not, I am assuming this data just refers to those ballots that were rejected
+# and NOT cured; since the only information regarding rejections provided is a 
+# rejection reason
+rejected_files <- list.files(path =  here(
+  "data/raw/CE-077_Rejected_Cure/Archive"
+  ), 
+  pattern = "*.txt",
+  full.names = TRUE)
+
+out <- vector("list", length(rejected_files))
+
+# Import, and clean at the same time 
+for (i in 2:length(rejected_files)) {
+  out[[i]] <- rejected_files[[i]] %>%
+    map_dfr(
+      ~ read.table(.x, sep = "|", header = TRUE, quote = "", fill = TRUE)
+    ) %>%
+    clean_names() %>%
+    select(voter_id, reject_reason) %>%
+    # Adding a collumn of 1s to later add 0s for those voters who weren't reject. 
+    mutate(rejected = rep(1, n()),
+           reject_reason = tolower(reject_reason))
+}
+
+# Collapse list into one df
+rejected_voters <- list.rbind(out)
+
+# Check duplicate values
+table(duplicated(rejected_voters$voter_id))
+
+# Join again with this new information: 
+df_joined <- left_join(df_temp, rejected_ballots, by = "voter_id") %>%
+  # Replace NA with 0 (not challenged)
+  mutate(rejected = replace_na(rejected, "0"))
+
+# The sample is too small to catch any of these new voters, so checking on
+# the full file: 
+load("data/tidy/merged_full.RData")
+# Checking: 
+nrow(inner_join(
+  select(df, voter_id),
+  select(rejected_voters, voter_id),
+  by = "voter_id"
+))
+
+# [1] 55693 
+# Seems to work. 
 
 # Graphics ---------------------------------------------------------------------
 # Checking if republicans vote higher is certain counties: 
