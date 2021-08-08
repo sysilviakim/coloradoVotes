@@ -142,54 +142,7 @@ nrow(inner_join(
 # [1] 55693 
 # Seems to work. 
 
-# Graphics ---------------------------------------------------------------------
-# Checking if republicans vote higher is certain counties: 
-ggplot(df_test, aes(x = county, fill = as.character(gen2020))) + 
-  geom_bar(position = "fill") +
-  labs(fill = "Voting Method") +
-  theme(axis.text.x = element_text(angle = 90)) 
 
-# Proportion plot of party by county: 
-ggplot(df_test, aes(x = county, fill = party_test)) + 
-  geom_bar(position = "fill") +
-  labs(fill = "Party", title = "Party Affilliation by County") +
-  theme(axis.text.x = element_text(angle = 90))
-
-# Proportion plot of registration date by vote method: 
-ggplot(df_test, aes(x = reg_bin, fill = as.character(gen2020))) + 
-  geom_bar(position = "fill") +
-  labs(fill = "Vote Method", title = "Vote Method versus Registration Date") 
-
-# Proportion plot of registration date by partisanship: 
-ggplot(df_test, aes(x = reg_bin, fill = party_test)) + 
-  geom_bar(position = "fill") +
-  labs(fill = "Party", title = "Registration Day versus Partisanship")
-
-# Registration date versus age: 
-# Plot of age group distribution first, for reference: 
-ggplot(df_test, aes(age_grp)) +
-  geom_bar() # Wow, CO is old! 
-# Proportion plot: 
-ggplot(df_test, aes(x = reg_bin, fill = age_grp)) + 
-  geom_bar(position = "fill") +
-  labs(fill = "Age Group", title = "Registration Day versus Age")
-# Somewhat interesting observation seems to be people in the 45-59 
-# age goup prefer EDR to earlier registrations. 
-
-# Proportion plot of age by county: 
-ggplot(df_test, aes(x = county, fill = age_grp)) + 
-  geom_bar(position = "fill") +
-  labs(fill = "Age Group", title = "Age Group by County") +
-  theme(axis.text.x = element_text(angle = 90))
-# Following the age bar graph, some counties are exclusively composed of 60+ 
-# people. Not sure if I went wrong somewhere, of if this is actually the case. 
-
-# Age versus Partisanship: 
-ggplot(df_test, aes(x = age_grp, fill = party_test)) +
-  geom_bar(position = "fill") +
-  labs(fill = "Party", title = "Age Group versus Party")
-# Kind of expected, the older the age group the lesser the rep proportion, and 
-# greater the dem proportion. 
 
 
 
