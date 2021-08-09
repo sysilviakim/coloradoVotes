@@ -35,15 +35,16 @@ prop(df, "switchers")
 
 # Setup: downsampling ==========================================================
 t1 <- multiclass_train_prep(df, y = "switcher")
-t2 <- downSample_custom(t1, p = 0.1, majority = "No", y = "switcher")
-fname <- here("output", "gbm_caret_prAUC_downsample_10_switchers.Rda")
+t2 <- downSample_custom(t1, p = 0.2, majority = "No", y = "switcher")
+fname <- here("output", "ranger_caret_prAUC_downsample_20_switchers.Rda")
 t2$traind <- t2$traind %>% select(-gen2020)
 
 # Run model (or export) ========================================================
 if (!file.exists(fname)) {
   model_down <- train(
     switcher ~ .,
-    data = t2$traind, trControl = t2$tc, method = "gbm", metric = "prAUC"
+    ## Given prSummary, AUC = prAUC
+    data = t2$traind, trControl = t2$tc, method = "ranger", metric = "AUC"
   )
   save(model_down, file = fname)
 } else {

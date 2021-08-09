@@ -143,7 +143,7 @@ pretty_condprob <- function(df, A_var, A_val, B_var, B_val,
 multiclass_train_prep <- function(df, class = 3, y = "gen2020") {
   tc <- trainControl(
     method = "cv", number = 10,
-    summaryFunction = ifelse(class > 2, multiClassSummary, twoClassSummary),
+    summaryFunction = ifelse(class > 2, multiClassSummary, prSummary),
     allowParallel = TRUE, verboseIter = FALSE, seeds = rep_seeds(),
     classProbs = TRUE, savePredictions = TRUE
   )
