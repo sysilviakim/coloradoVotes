@@ -63,13 +63,13 @@ primary_history <- read.table(
   mutate(voted_party = na_if(voted_party, ""),
          received_party_ballot = na_if(received_party_ballot, ""))
 
-df_joined <- left_join(df, primary_history, by = "voter_id")
+df_temp <- left_join(df, primary_history, by = "voter_id")
 
 # Create a column with leanings: 
 # Leanings are imputed from: 
 # - Party voted for (priority)
 # - Party of the ballot they recieved (if party voted for is not available)
-df_test <- df_joined %>%
+df_test <- df_temp %>%
   mutate(party_test = case_when(
     party %in% "oth" & !is.na(voted_party) ~ voted_party,
     party %in% "oth" & is.na(voted_party) & !is.na(received_party_ballot) ~ 
@@ -92,54 +92,57 @@ table(df_test$party_test)/nrow(df_test)
 # 0.4218437 0.1913828 0.3867735 
 # Seems to work! 
 
-# Graphics ---------------------------------------------------------------------
-# Checking if republicans vote higher is certain counties: 
-ggplot(df_test, aes(x = county, fill = as.character(gen2020))) + 
-  geom_bar(position = "fill") +
-  labs(fill = "Voting Method") +
-  theme(axis.text.x = element_text(angle = 90)) 
+# Add challenged/rejected column -----------------------------------------------
+# Based on the name, and the lack of a column that tells if they were cured or 
+# not, I am assuming this data just refers to those ballots that were rejected
+# and NOT cured; since the only information regarding rejections provided is a 
+# rejection reason
+rejected_files <- list.files(path =  here(
+  "data/raw/CE-077_Rejected_Cure/Archive"
+  ), 
+  pattern = "*.txt",
+  full.names = TRUE)
 
-# Proportion plot of party by county: 
-ggplot(df_test, aes(x = county, fill = party_test)) + 
-  geom_bar(position = "fill") +
-  labs(fill = "Party", title = "Party Affilliation by County") +
-  theme(axis.text.x = element_text(angle = 90))
+out <- vector("list", length(rejected_files))
 
-# Proportion plot of registration date by vote method: 
-ggplot(df_test, aes(x = reg_bin, fill = as.character(gen2020))) + 
-  geom_bar(position = "fill") +
-  labs(fill = "Vote Method", title = "Vote Method versus Registration Date") 
+# Import, and clean at the same time 
+for (i in 2:length(rejected_files)) {
+  out[[i]] <- rejected_files[[i]] %>%
+    map_dfr(
+      ~ read.table(.x, sep = "|", header = TRUE, quote = "", fill = TRUE)
+    ) %>%
+    clean_names() %>%
+    select(voter_id, reject_reason) %>%
+    # Adding a collumn of 1s to later add 0s for those voters who weren't reject. 
+    mutate(rejected = rep(1, n()),
+           reject_reason = tolower(reject_reason))
+}
 
-# Proportion plot of registration date by partisanship: 
-ggplot(df_test, aes(x = reg_bin, fill = party_test)) + 
-  geom_bar(position = "fill") +
-  labs(fill = "Party", title = "Registration Day versus Partisanship")
+# Collapse list into one df
+rejected_voters <- list.rbind(out)
 
-# Registration date versus age: 
-# Plot of age group distribution first, for reference: 
-ggplot(df_test, aes(age_grp)) +
-  geom_bar() # Wow, CO is old! 
-# Proportion plot: 
-ggplot(df_test, aes(x = reg_bin, fill = age_grp)) + 
-  geom_bar(position = "fill") +
-  labs(fill = "Age Group", title = "Registration Day versus Age")
-# Somewhat interesting observation seems to be people in the 45-59 
-# age goup prefer EDR to earlier registrations. 
+# Check duplicate values
+table(duplicated(rejected_voters$voter_id))
 
-# Proportion plot of age by county: 
-ggplot(df_test, aes(x = county, fill = age_grp)) + 
-  geom_bar(position = "fill") +
-  labs(fill = "Age Group", title = "Age Group by County") +
-  theme(axis.text.x = element_text(angle = 90))
-# Following the age bar graph, some counties are exclusively composed of 60+ 
-# people. Not sure if I went wrong somewhere, of if this is actually the case. 
+# Join again with this new information: 
+df_joined <- left_join(df_temp, rejected_ballots, by = "voter_id") %>%
+  # Replace NA with 0 (not challenged)
+  mutate(rejected = replace_na(rejected, "0"))
 
-# Age versus Partisanship: 
-ggplot(df_test, aes(x = age_grp, fill = party_test)) +
-  geom_bar(position = "fill") +
-  labs(fill = "Party", title = "Age Group versus Party")
-# Kind of expected, the older the age group the lesser the rep proportion, and 
-# greater the dem proportion. 
+# The sample is too small to catch any of these new voters, so checking on
+# the full file: 
+load("data/tidy/merged_full.RData")
+# Checking: 
+nrow(inner_join(
+  select(df, voter_id),
+  select(rejected_voters, voter_id),
+  by = "voter_id"
+))
+
+# [1] 55693 
+# Seems to work. 
+
+
 
 
 
