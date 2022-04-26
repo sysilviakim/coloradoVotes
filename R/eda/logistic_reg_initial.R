@@ -133,7 +133,3 @@ roc.curve(vote_test$gen2020, predict_4)
 # Area under the curve (AUC): 0.626
 
 # They aren't that better than the initial model--0.627 is very low. 
-
-
-
-
