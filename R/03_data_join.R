@@ -11,7 +11,9 @@ names(elect_list$undelivered)
 names(master_vr)
 
 # Although there are common variables, safest bet is the ID ====================
-common_vars <- elect_list %>% map(names) %>% Reduce(intersect, .)
+common_vars <- elect_list %>%
+  map(names) %>%
+  Reduce(intersect, .)
 # [1] "voter_id" "last_name"   "first_name"  "middle_name" "name_suffix" "party"
 
 nrow(inner_join(master_vr, elect_list$returned, by = "voter_id"))
@@ -25,10 +27,10 @@ nrow(inner_join(master_vr, elect_list$returned))
 elect_list %>%
   map(
     ~ anti_join(.x, master_vr, by = "voter_id") %>%
-      nrow
+      nrow()
   ) %>%
   unlist()
-# ballots    returned       cured undelivered 
+# ballots    returned       cured undelivered
 # 19909       19793         364         125
 
 # Form a master file ===========================================================
@@ -42,15 +44,15 @@ df <- master_vr %>%
 
 # Voting history for 2020 ======================================================
 # Aggregate columns: for now, simply delete what's not in master VR
-temp <- df %>% 
+temp <- df %>%
   select(party, vote_method) %>%
   mutate(
     party2 = case_when(
-      party == "dem" ~ "dem", 
+      party == "dem" ~ "dem",
       party == "rep" ~ "rep"
     ),
     party4 = case_when(
-      party == "dem" ~ "dem", 
+      party == "dem" ~ "dem",
       party == "rep" ~ "rep",
       party == "uaf" ~ "unaffiliated",
       is.na(party) ~ NA_character_,
