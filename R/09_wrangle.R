@@ -180,7 +180,7 @@ if (!file.exists(fname)) {
   
   out <- vector("list", length(rejected_files))
   
-  # Import, and clean at the same time:
+  ## Import and clean at the same time
   for (i in 2:length(rejected_files)) {
     out[[i]] <- rejected_files[[i]] %>%
       map_dfr(
@@ -199,6 +199,31 @@ if (!file.exists(fname)) {
   df_joined <- left_join(df_temp, out %>% bind_rows(), by = "voter_id") %>%
     ## Replace NA with 0 (not challenged)
     mutate(rejected = replace_na(rejected, "0"))
+  
+  ## Switching -----------------------------------------------------------------
+  df <- df %>%
+    filter(
+      ## Some pattern, either mail or in person, before 2020 cycle
+      gen2018 != "Not voted" | pri2018 != "Not voted" | 
+        gen2016 != "Not voted" | pri2016 != "Not voted" | 
+        gen2014 != "Not voted" | pri2014 != "Not voted"
+    ) %>%
+    filter(
+      ## Did vote in gen 2020
+      gen2020 != "Not voted"
+    ) %>%
+    mutate(
+      switcher = case_when(
+        gen2020 == "In person" & (
+          gen2018 == "Mail" | pri2018 == "Mail" | 
+            gen2016 == "Mail" | pri2016 == "Mail" | 
+            gen2014 == "Mail" | pri2014 == "Mail"
+        ) ~ "Yes",
+        TRUE ~ "No"
+      )
+    ) %>%
+    filter(!(switcher == "No" & gen2020 == "In person")) %>%
+    mutate(switcher = factor(switcher))
   
   ## While `df_joined` is the final product, it should match nrow with df
   assert_that(nrow(df) == nrow(df_joined))
