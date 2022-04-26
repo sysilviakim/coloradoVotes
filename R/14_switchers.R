@@ -5,32 +5,6 @@ orig <- loadRData(here("data", "tidy", "multiclass_complete.Rda"))
 
 df <- orig %>% select(-county, -in_person_vote_date)
 assert_that(!any(is.na(df)))
-
-# Modeling switchers ===========================================================
-df <- df %>%
-  filter(
-    ## Some pattern, either mail or in person, before 2020 cycle
-    gen2018 != "Not voted" | pri2018 != "Not voted" | 
-      gen2016 != "Not voted" | pri2016 != "Not voted" | 
-      gen2014 != "Not voted" | pri2014 != "Not voted"
-  ) %>%
-  filter(
-    ## Did vote in gen 2020
-    gen2020 != "Not voted"
-  ) %>%
-  mutate(
-    switcher = case_when(
-      gen2020 == "In person" & (
-        gen2018 == "Mail" | pri2018 == "Mail" | 
-          gen2016 == "Mail" | pri2016 == "Mail" | 
-          gen2014 == "Mail" | pri2014 == "Mail"
-      ) ~ "Yes",
-      TRUE ~ "No"
-    )
-  ) %>%
-  filter(!(switcher == "No" & gen2020 == "In person")) %>%
-  mutate(switcher = factor(switcher))
-
 prop(df, "switchers")
 
 # Setup: downsampling ==========================================================

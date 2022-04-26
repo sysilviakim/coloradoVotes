@@ -10,6 +10,7 @@ library(styler)
 library(Kmisc)
 library(rlist)
 library(tidymodels)
+library(xtable)
 
 # Other setups =================================================================
 if (Sys.info()["sysname"] == "Windows") {
