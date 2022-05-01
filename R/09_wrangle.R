@@ -29,8 +29,8 @@ if (!file.exists(fname)) {
         levels = c("dem", "rep", "uaf", "lbr", "grn", "acn", "apv")
       ),
       party = case_when(
-        party %in% "dem" | party %in% "democratic" ~ "dem",
-        party %in% "rep" | party %in% "republican" ~ "rep",
+        party == "dem" | party == "democratic" ~ "dem",
+        party == "rep" | party == "republican" ~ "rep",
         TRUE ~ "oth"
       ),
       party = factor(party, levels = c("dem", "rep", "oth"))
@@ -55,17 +55,16 @@ if (!file.exists(fname)) {
     )
 
   ## Registration bins ---------------------------------------------------------
+  df$reg_gen2020 <- as.numeric(mdy("11/03/2020") - df$registration_date)
+  df$reg_gen2016 <- as.numeric(mdy("11/08/2016") - df$registration_date)
+  df$reg_gen2018 <- as.numeric(mdy("11/06/2018") - df$registration_date)
+  df$reg_gen2014 <- as.numeric(mdy("11/04/2014") - df$registration_date)
+  df$reg_pri2020 <- as.numeric(mdy("06/30/2020") - df$registration_date)
+  df$reg_pri2016 <- as.numeric(mdy("06/28/2016") - df$registration_date)
+  df$reg_pri2018 <- as.numeric(mdy("06/26/2018") - df$registration_date)
+  df$reg_pri2014 <- as.numeric(mdy("06/24/2014") - df$registration_date)
+  
   df <- df %>%
-    mutate(
-      reg_gen2020 = as.numeric(mdy("11/03/2020") - mdy(registration_date)),
-      reg_gen2016 = as.numeric(mdy("11/08/2016") - mdy(registration_date)),
-      reg_gen2018 = as.numeric(mdy("11/06/2018") - mdy(registration_date)),
-      reg_gen2014 = as.numeric(mdy("11/04/2014") - mdy(registration_date)),
-      reg_pri2020 = as.numeric(mdy("06/30/2020") - mdy(registration_date)),
-      reg_pri2016 = as.numeric(mdy("06/28/2016") - mdy(registration_date)),
-      reg_pri2018 = as.numeric(mdy("06/26/2018") - mdy(registration_date)),
-      reg_pri2014 = as.numeric(mdy("06/24/2014") - mdy(registration_date))
-    ) %>%
     mutate(
       reg_bin = coalesce(
         reg_gen2020, reg_pri2020, reg_gen2018, reg_pri2018,
@@ -122,10 +121,18 @@ if (!file.exists(fname)) {
       "EX-002_2018_Primary_Supplemental_Vote_History",
       "EX-002_2018_Primary_Supplemental_Vote_History.txt"
     ),
-    header = TRUE, sep = "|"
+    header = TRUE, sep = "|",
+    col.names = read_excel(
+      here(
+        "data/raw/EX-002 Voting History Files", "20180719",
+        "EX-002_2018_Primary_Supplemental_Vote_History",
+        "EX-002_2018_Primary_Supplemental_Vote_History_Header_Row.xlsx"
+      )
+    ) %>%
+      clean_names() %>%
+      names()
   ) %>%
-    clean_names() %>%
-    select(voted_party, received_party_ballot, voter_id) %>%
+    select(voter_id, voted_party, received_party_ballot) %>%
     mutate(
       voter_id = as.character(voter_id),
       across(everything(), tolower)
@@ -136,34 +143,40 @@ if (!file.exists(fname)) {
     )
 
   df_temp <- left_join(df, primary_hist_2018, by = "voter_id")
-
-  ## Create a column with leanings:
-  ## Leanings are imputed from:
+  assert_that(nrow(df) == nrow(df_temp))
+  prop(primary_hist_2018, "voted_party")
+  #  dem  rep <NA> 
+  # 14.4  8.6 77.0
+  prop(primary_hist_2018, "received_party_ballot")
+  # dem  not tracked         rep 
+  # 55.4         0.0        44.6   
+  
+  ## Create a column with leanings, imputed from
   ## - Party voted for (priority)
   ## - Party of the ballot they received (if party voted for is not available)
+  df_temp$party <- as.character(df_temp$party) 
   df_test <- df_temp %>%
     mutate(
       party_test = case_when(
-        party %in% "oth" & !is.na(voted_party) ~ voted_party,
-        party %in% "oth" & is.na(voted_party) & !is.na(received_party_ballot) ~
+        party == "oth" & !is.na(voted_party) ~ voted_party,
+        party == "oth" & is.na(voted_party) & 
+          !is.na(received_party_ballot) & 
+          received_party_ballot != "not tracked" ~
           received_party_ballot,
         TRUE ~ party
-      )
+      ),
+      party_test = factor(party_test, levels = c("dem", "rep", "oth"))
     )
 
-  ggplot(df_test, aes(party)) +
-    geom_bar()
-
-  # Comparing now:
-  # Prop table without imputing:
-  table(df$party) / nrow(df)
-  # dem       oth       rep
-  # 0.3632265 0.2915832 0.3451904
+  # Comparing. Without imputing (slightly diff from recorded number):
+  prop(df, "party")
+  #  dem  rep  oth 
+  # 30.8 28.4 40.8 
 
   # Prop table after imputing:
-  table(df_test$party_test) / nrow(df_test)
-  # dem       oth       rep
-  # 0.4218437 0.1913828 0.3867735
+  prop(df_test, "party_test")
+  #  dem  rep  oth 
+  # 35.6 31.5 32.8 
   # Seems to work!
 
   ## Add challenged/rejected column --------------------------------------------
@@ -174,17 +187,20 @@ if (!file.exists(fname)) {
   
   rejected_files <- list.files(
     path = here("data/raw/CE-077_Rejected_Cure/Archive"),
-    pattern = "*.txt",
+    pattern = "Rejected(.*)txt",
     full.names = TRUE
   )
   
   out <- vector("list", length(rejected_files))
   
   ## Import and clean at the same time
-  for (i in 2:length(rejected_files)) {
+  for (i in seq(length(rejected_files))) {
     out[[i]] <- rejected_files[[i]] %>%
       map_dfr(
-        ~ read.table(.x, sep = "|", header = TRUE, quote = "", fill = TRUE)
+        ~ read.table(
+          .x, sep = "|", header = TRUE, quote = "", fill = TRUE,
+          colClasses = "character"
+        )
       ) %>%
       clean_names() %>%
       select(voter_id, reject_reason) %>%
@@ -195,13 +211,22 @@ if (!file.exists(fname)) {
       )
   }
   
+  rejected_df <- out %>%
+    bind_rows() %>%
+    dedup() %>%
+    group_by(voter_id) %>%
+    arrange(reject_reason) %>%
+    slice(n())
+  assert_that(!any(duplicated(rejected_df$voter_id)))
+
   ## Join again with this new information:
-  df_joined <- left_join(df_temp, out %>% bind_rows(), by = "voter_id") %>%
+  df_joined <- left_join(df_temp, rejected_df, by = "voter_id") %>%
     ## Replace NA with 0 (not challenged)
-    mutate(rejected = replace_na(rejected, "0"))
+    mutate(rejected = replace_na(rejected, 0))
+  assert_that(nrow(df_temp) == nrow(df_joined))
   
   ## Switching -----------------------------------------------------------------
-  df <- df %>%
+  df_joined <- df_joined %>%
     filter(
       ## Some pattern, either mail or in person, before 2020 cycle
       gen2018 != "Not voted" | pri2018 != "Not voted" | 
@@ -225,8 +250,6 @@ if (!file.exists(fname)) {
     filter(!(switcher == "No" & gen2020 == "In person")) %>%
     mutate(switcher = factor(switcher))
   
-  ## While `df_joined` is the final product, it should match nrow with df
-  assert_that(nrow(df) == nrow(df_joined))
   df <- df_joined
   
   if (nrows == 100) {
@@ -242,6 +265,20 @@ if (!file.exists(fname)) {
 temp <- table(df$county)
 temp <- sort(temp)
 temp
+# san juan    hinsdale     mineral     jackson       kiowa    cheyenne     dolores    sedgwick     crowley    costilla 
+#      471         561         622         781         805        1029        1240        1251        1476        1771 
+#     bent        baca    phillips     lincoln  washington    saguache        lake      custer  rio blanco  kit carson 
+#     1888        1975        2206        2263        2630        2805        3018        3071        3182        3354 
+#    ouray      gilpin    huerfano     conejos  san miguel        yuma     prowers  rio grande clear creek      moffat 
+#     3386        3538        3700        3796        4114        4421        4629        5300        5558        5749 
+#  alamosa  las animas   archuleta       otero       grand       logan    gunnison      pitkin        park      morgan 
+#     6444        6449        7261        8129        8326        9014        9201        9805       10337       11333 
+#  chaffee   montezuma      teller       routt      summit      elbert       delta    montrose     fremont       eagle 
+#    11700       12572       13532       14088       14604       16206       16369       20745       21086       23833 
+# garfield    la plata  broomfield      pueblo        mesa        weld     boulder     larimer       adams     douglas 
+#    25522       28903       37275       73393       74275      136376      169861      183106      186786      190208 
+# arapahoe     el paso      denver   jefferson 
+#   283724      293444      306108      317684 
 
 df <- df %>%
   rename(county_full = county) %>%
