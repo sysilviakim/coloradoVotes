@@ -88,7 +88,7 @@ df_listwise <- df_listwise %>%
   ## nnet::multinom cannot handle otherwise
   select(-county, -county_full, -in_person_vote_date, -oth_2016, -status)
 
-fname <- here("out", "multinom.Rda")
+fname <- here("output", "multinom.Rda")
 if (!file.exists(fname)) {
   mnl <- multinom(gen2020 ~ ., data = df_listwise)
   save(mnl, file = fname)
