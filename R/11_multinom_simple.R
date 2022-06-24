@@ -31,17 +31,16 @@ df_listwise <- df %>%
     c(contains("gen"), contains("pri"))
   ) %>%
   complete.cases()
+df_listwise <- df[df_listwise, ]
+round(nrow(df_listwise) / nrow(df) * 100, digits = 1) ## 99.4%
 
-df_listwise <- df[df_listwise, ] %>%
+df_listwise <- df_listwise %>%
   select(
     gen2020, party, yob, congressional, permanent_mail_in_voter, county,
     status, county_full, registration_date, in_person_vote_date,
     c(contains("gen"), contains("pri"))
   ) %>%
-  mutate(
-    registration_date = mdy(registration_date),
-    in_person_vote_date = mdy(in_person_vote_date)
-  ) %>%
+  mutate(in_person_vote_date = mdy(in_person_vote_date)) %>%
   mutate(
     registration_date = as.Date("2020-11-06") - registration_date,
     registration_date = as.numeric(registration_date)
