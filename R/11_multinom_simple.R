@@ -87,8 +87,8 @@ save(df_listwise, file = here("data", "tidy", "multiclass_complete.Rda"))
 df_listwise <- df_listwise %>%
   ## nnet::multinom cannot handle otherwise
   select(-county, -county_full, -in_person_vote_date, -oth_2016, -status)
-fname <- here("output", "multinom.Rda")
 
+fname <- here("out", "multinom.Rda")
 if (!file.exists(fname)) {
   mnl <- multinom(gen2020 ~ ., data = df_listwise)
   save(mnl, file = fname)
@@ -104,8 +104,11 @@ p
 exp(coef(mnl))
 
 ## Terrible prediction due to class imbalance (not out-sample)
+## Predicts 0.00694% of voters will vote in person
 pred <- predict(mnl)
-prop.table(table(pred))
+formatC(prop.table(table(pred)) * 100, format = "f", digits = 5) %>%
+  .[[2]] %>%
+  write(here("tab", "multinom_simple_inperson_prediction_perc.tex"))
 
 # p1 <- visreg(
 #   mnl,
