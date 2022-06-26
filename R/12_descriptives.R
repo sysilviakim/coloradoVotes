@@ -7,14 +7,24 @@ df <- orig %>% select(-county, -in_person_vote_date)
 assert_that(!any(is.na(df)))
 
 # Simple percentages ===========================================================
-prop(
+temp <- prop(
   df %>%
     mutate(
       party = as.character(party),
       party = case_when(party == "dem" | party == "rep" ~ party, TRUE ~ "oth")
     ),
   c("gen2020", "party")
+) %>%
+  xtable()
+
+names(temp) <- c("Dem.", "Rep.", "Oth.")
+
+print(
+  temp, 
+  file = here("tab", "prop_table.tex"),
+  include.rownames = FALSE, booktabs = TRUE, floating = FALSE
 )
+
 pretty_condprob(df, A_var = "gen2020", "In person", B_var = "party", "rep")
 pretty_condprob(df, A_var = "gen2020", "In person", B_var = "party", "dem")
 
