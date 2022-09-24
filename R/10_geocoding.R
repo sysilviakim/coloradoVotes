@@ -1,5 +1,11 @@
 source(here::here("R", "utilities.R"))
-load(here("data/tidy/sample/merged_sample.RData"))
+
+fname <- here("data", "tidy", "multiclass.Rda")
+if (nrows == 100) {
+  load(gsub(".Rda", "_sample.Rda", fname))
+} else {
+  load(fname)
+}
 
 # Function ---------------------------------------------------------------------
 # Function that does an initial geocoding batch job, then filters out addresses
