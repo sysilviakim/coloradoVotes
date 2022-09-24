@@ -1,6 +1,7 @@
 source(here::here("R", "utilities.R"))
 orig <- loadRData(here("data", "tidy", "multiclass_complete.Rda"))
-df_switched <- loadRData(here("data", "tidy", "multiclass_county_collapsed.Rda"))
+df_switched <-
+  loadRData(here("data", "tidy", "multiclass_county_collapsed.Rda"))
 
 df <- orig %>% select(-county, -in_person_vote_date)
 
@@ -20,7 +21,7 @@ temp <- prop(
 names(temp) <- c("Dem.", "Rep.", "Oth.")
 
 print(
-  temp, 
+  temp,
   file = here("tab", "prop_table.tex"),
   include.rownames = FALSE, booktabs = TRUE, floating = FALSE
 )
@@ -63,14 +64,14 @@ names(temp) <- c(
   "Obs.", "Dem (%)", "Rep (%)", "Others (%)"
 )
 print(
-  temp, 
+  temp,
   file = here("tab", "top_10_voting_history.tex"),
   include.rownames = FALSE, booktabs = TRUE, floating = FALSE
 )
 
 # If limited to gen2020 in-persons =============================================
 temp <- xtable(
-  head(summ %>% filter(gen2020 == "In person"), 10),
+  head(summ %>% filter(gen2020 == "In person"), 5),
   align = "lllllllrrrr"
 )
 names(temp) <- c(
@@ -79,50 +80,42 @@ names(temp) <- c(
   "Obs.", "Dem (%)", "Rep (%)", "Others (%)"
 )
 print(
-  temp, 
-  file = here("tab", "top_10_voting_history_in_person.tex"),
+  temp,
+  file = here("tab", "top_5_voting_history_in_person.tex"),
   include.rownames = FALSE, booktabs = TRUE, floating = FALSE
 )
 
 # Summarize switches by county =================================================
-table_1 <- df_switched %>%
+switch_by_county <- df_switched %>%
   group_by(county, switcher) %>%
-  summarise(n = n()) %>%
+  summarise(n = n(), county_designation = last(county_designation)) %>%
   mutate(sum = sum(n)) %>%
-  mutate(prop = n/sum) %>%
+  mutate(prop = n / sum) %>%
   filter(switcher %in% "Yes") %>%
-  arrange(desc(prop)) %>%
-  select(-switcher, -sum) %>%
-  head(10) %>%
-  xtable()
+  rowwise() %>%
+  mutate(county = simple_cap(county)) %>%
+  filter(county != "Others") %>%
+  ungroup()
 
-# county        n   prop
-# <chr>     <int>  <dbl>
-#   1 mesa       5024 0.0676
-# 2 weld       6926 0.0508
-# 3 montrose   1030 0.0497
-# 4 la plata   1270 0.0439
-# 5 fremont     905 0.0429
-# 6 garfield   1072 0.0420
-# 7 adams      7511 0.0402
-# 8 arapahoe  10932 0.0385
-# 9 el paso   10121 0.0345
-# 10 jefferson 10668 0.0336
-
-names(table_1) <- c("County", "N", "Proportion")
-
-print(
-  table_1, 
-  file = here("tab", "switches_county_split.tex"),
-  include.rownames = FALSE, booktabs = TRUE, floating = FALSE
-)
+p <- ggplot(switch_by_county, aes(x = fct_reorder(county, desc(prop)))) + 
+  geom_col(
+    aes(y = prop, color = NULL, fill = county_designation)
+  ) + 
+  scale_y_continuous(labels = percent) + 
+  scale_fill_brewer(palette = "Paired") + 
+  xlab("Counties") + 
+  ylab("Proportion of Switchers") + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) + 
+  labs(fill = "Type") + 
+  theme(legend.position = c(0.95, 0.85))
+p
 
 # Summarize switches by county designation =====================================
 table_2 <- df_switched %>%
   group_by(county_designation, switcher) %>%
   summarise(n = n()) %>%
   mutate(sum = sum(n)) %>%
-  mutate(prop = n/sum) %>%
+  mutate(prop = n / sum) %>%
   filter(switcher %in% "Yes") %>%
   select(-switcher, -sum) %>%
   xtable()
@@ -136,7 +129,7 @@ table_2 <- df_switched %>%
 names(table_2) <- c("County Designation", "N", "Proportion")
 
 print(
-  table_2, 
+  table_2,
   file = here("tab", "switches_county_designation_split.tex"),
   include.rownames = FALSE, booktabs = TRUE, floating = FALSE
 )
@@ -146,7 +139,7 @@ table_3 <- df_switched %>%
   group_by(switcher, party, county_designation) %>%
   summarise(n = n()) %>%
   mutate(sum = sum(n)) %>%
-  mutate(prop = n/sum) %>%
+  mutate(prop = n / sum) %>%
   filter(switcher %in% "Yes") %>%
   ungroup() %>%
   select(-switcher, -sum) %>%
@@ -154,20 +147,20 @@ table_3 <- df_switched %>%
 
 # party county_designation     n   prop
 # <chr> <fct>              <int>  <dbl>
-#   1 dem   urban              14577 0.899 
+#   1 dem   urban              14577 0.899
 # 2 dem   rural               1407 0.0868
 # 3 dem   frontier             228 0.0141
-# 4 oth   urban              30054 0.878 
-# 5 oth   rural               3686 0.108 
+# 4 oth   urban              30054 0.878
+# 5 oth   rural               3686 0.108
 # 6 oth   frontier             505 0.0147
-# 7 rep   urban              36870 0.877 
-# 8 rep   rural               4303 0.102 
+# 7 rep   urban              36870 0.877
+# 8 rep   rural               4303 0.102
 # 9 rep   frontier             855 0.0203
 
 names(table_3) <- c("Party", "County Designation", "N", "Proportion")
 
 print(
-  table_3, 
+  table_3,
   file = here("tab", "switches_partisan_split.tex"),
   include.rownames = FALSE, booktabs = TRUE, floating = FALSE
 )
