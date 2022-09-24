@@ -6,51 +6,47 @@ orig <- loadRData(here("data", "tidy", "multiclass_complete.Rda"))
 df <- orig %>% select(-county, -in_person_vote_date)
 assert_that(!any(is.na(df)))
 
-# prop(
-#   df %>%
-#     mutate(
-#       party = as.character(party),
-#       party = case_when(party == "dem" | party == "rep" ~ party, TRUE ~ "oth")
-#     ),
-#   c("gen2020", "party")
-# )
-
-# df %>%
-#   group_by(county_full) %>%
-#   group_split() %>%
-#   `names<-`({.} %>% map(~ .x$county_full[1]) %>% unlist()) %>%
-#   map(~ prop(.x, "gen2020"))
-
 # Parameters ===================================================================
-dp <- 0.1 # 0.2
+## dp = how much to downsample the majority class?
+dp <- c(0.05, 0.1, 0.2)
 metric <- "prAUC"
-alg <- "ranger" # "gbm"
+alg <- c("ranger", "gbm")
 yvar <- "gen2020"
 
-# Setup: downsampling ==========================================================
-t1 <- multiclass_train_prep(df)
-t2 <- downSample_custom(t1, p = dp)
-dim(t2$traind)
-prop(t2$traind, yvar)
-fname <- here(
-  "output",
-  paste0(alg, "_caret_", metric, "_downsample_", dp * 100, ".Rda")
-)
-
-# Run model (or export) ========================================================
-if (!file.exists(fname)) {
-  model_down <- train(
-    gen2020 ~ .,
-    data = t2$traind, trControl = t2$tc, method = alg, metric = metric
-  )
-  save(model_down, file = fname)
-} else {
-  load(fname)
+# Setup and run downsampling ===================================================
+perf_list <- list()
+for (dpx in dp) {
+  for (algx in alg) {
+    ## Data prep
+    t1 <- multiclass_train_prep(df)
+    t2 <- downSample_custom(t1, p = dpx)
+    dim(t2$traind)
+    prop(t2$traind, yvar)
+    fname <- here(
+      "output",
+      paste0(algx, "_caret_", metric, "_downsample_", dpx * 100, ".Rda")
+    )
+    
+    ## Run and save
+    if (!file.exists(fname)) {
+      model_down <- train(
+        gen2020 ~ .,
+        data = t2$traind, trControl = t2$tc, method = algx, metric = metric
+      )
+      save(model_down, file = fname)
+    } else {
+      load(fname)
+    }
+    
+    gc(reset = TRUE)
+    
+    # Performance summary
+    temp2 <- pred_df(t2, model_down)
+    perf_list[[algx]][[dpx]] <- 
+      multiClassSummary(temp2, lev = levels(t2$test[[yvar]]))
+    save(perf_list, file = here("output", "perf_list.Rda"))
+  }
 }
-
-# Performance summary ==========================================================
-temp2 <- pred_df(t2, model_down)
-multiClassSummary(temp2, lev = levels(t2$test[[yvar]]))
 
 # Importance ===================================================================
 varImp(model_down)
