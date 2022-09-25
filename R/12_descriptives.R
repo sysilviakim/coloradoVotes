@@ -87,28 +87,73 @@ print(
 
 # Summarize switches by county =================================================
 switch_by_county <- df_switched %>%
-  group_by(county, switcher) %>%
+  group_by(county_full, switcher) %>%
   summarise(n = n(), county_designation = last(county_designation)) %>%
   mutate(sum = sum(n)) %>%
   mutate(prop = n / sum) %>%
   filter(switcher %in% "Yes") %>%
   rowwise() %>%
-  mutate(county = simple_cap(county)) %>%
-  filter(county != "Others") %>%
+  mutate(
+    county_full = simple_cap(county_full),
+    county_designation = simple_cap(as.character(county_designation))
+  ) %>%
   ungroup()
+summary(switch_by_county$prop)
 
-p <- ggplot(switch_by_county, aes(x = fct_reorder(county, desc(prop)))) + 
+switch_avg <- as.numeric(prop(df_switched, "switcher", digit = 3)[[2]]) / 100
+p <- ggplot(switch_by_county, aes(x = fct_reorder(county_full, desc(prop)))) +
   geom_col(
     aes(y = prop, color = NULL, fill = county_designation)
-  ) + 
-  scale_y_continuous(labels = percent) + 
-  scale_fill_brewer(palette = "Paired") + 
-  xlab("Counties") + 
-  ylab("Proportion of Switchers") + 
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) + 
-  labs(fill = "Type") + 
-  theme(legend.position = c(0.95, 0.85))
+  ) +
+  scale_y_continuous(labels = percent) +
+  scale_fill_viridis_d(end = 0.9, direction = -1) +
+  xlab("Counties") +
+  ylab("Proportion of Switchers") +
+  labs(fill = "Designation") +
+  geom_hline(yintercept = switch_avg) +
+  annotate(
+    geom = "text", x = 50, y = 0.04, family = "CM Roman",
+    label = paste0("Average: ", switch_avg * 100, "%")
+  )
 p
+
+pdf(here("fig", "switch_by_county.pdf"), width = 8.5, height = 4)
+print(
+  pdf_default(p) +
+    theme(
+      axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+      legend.position = c(0.9, 0.8)
+    )
+)
+dev.off()
+
+p1 <- ggplot(switch_by_county, aes(prop)) +
+  geom_density() +
+  scale_x_continuous(labels = percent) + 
+  xlab("Proportion of Switchers") + 
+  ylab("Density")
+
+pdf(here("fig", "switch_by_county_density.pdf"), width = 4, height = 2.5)
+print(pdf_default(p1))
+dev.off()
+
+p2 <- ggplot(switch_by_county, aes(sample = prop)) +
+  stat_qq() + 
+  stat_qq_line() + 
+  xlab("Theoretical Quantiles") +
+  ylab("Switcher Proportion's Quantiles")
+
+pdf(here("fig", "switch_by_county_qq.pdf"), width = 4, height = 2.5)
+print(pdf_default(p2))
+dev.off()
+
+library(normtest)
+ad.test(switch_by_county$prop)
+cvm.test(switch_by_county$prop)
+
+summary(
+  lm(as.numeric(switcher) ~ party * county_designation, data = df_switched)
+)
 
 # Summarize switches by county designation =====================================
 table_2 <- df_switched %>%
