@@ -14,9 +14,13 @@ alg <- c("ranger", "gbm")
 yvar <- "gen2020"
 
 # Setup and run downsampling ===================================================
-perf_list <- list()
-for (dpx in dp) {
-  for (algx in alg) {
+perf_list <- vector("list", length = length(alg))
+names(perf_list) <- alg
+perf_list <- perf_list %>%
+  imap(~ set_names(vector("list", length = length(dp)), nm = dp))
+
+for (algx in alg) {
+  for (dpx in dp) {
     ## Data prep
     t1 <- multiclass_train_prep(df)
     t2 <- downSample_custom(t1, p = dpx)
@@ -45,6 +49,8 @@ for (dpx in dp) {
     perf_list[[algx]][[dpx]] <- 
       multiClassSummary(temp2, lev = levels(t2$test[[yvar]]))
     save(perf_list, file = here("output", "perf_list.Rda"))
+    
+    message(paste0("Task finished: ", algx, ", ", dpx, "."))
   }
 }
 
