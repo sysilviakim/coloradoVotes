@@ -1,24 +1,17 @@
 source(here::here("R", "utilities.R"))
-orig <- loadRData(here("data", "tidy", "multiclass_complete.Rda"))
-df_switched <-
+df_switched <- orig <- 
   loadRData(here("data", "tidy", "multiclass_county_collapsed.Rda"))
 
-df <- orig %>% select(-county, -in_person_vote_date)
-
-assert_that(!any(is.na(df)))
+df <- orig %>% select(-county, -in_person_vote_date) %>%
+  mutate(party3 = as.character(party))
+df$party3 <-
+  case_when(df$party3 == "dem" | df$party3 == "rep" ~ df$party, TRUE ~ "oth")
+## assert_that(!any(is.na(df)))
 
 # Simple percentages ===========================================================
-temp <- prop(
-  df %>%
-    mutate(
-      party = as.character(party),
-      party = case_when(party == "dem" | party == "rep" ~ party, TRUE ~ "oth")
-    ),
-  c("gen2020", "party")
-) %>%
+temp <- prop(df, c("gen2020", "party3")) %>%
   xtable()
-
-names(temp) <- c("Dem.", "Rep.", "Oth.")
+names(temp) <- c("Democrat", "Republican", "Other")
 
 print(
   temp,
@@ -27,7 +20,9 @@ print(
 )
 
 pretty_condprob(df, A_var = "gen2020", "In person", B_var = "party", "rep")
+## Cond. on party == rep, Pr(gen2020 == In person) is 6.9%
 pretty_condprob(df, A_var = "gen2020", "In person", B_var = "party", "dem")
+## Cond. on party == dem, Pr(gen2020 == In person) is 3.4%
 
 # Types of voting patterns =====================================================
 summ <- df %>%
@@ -89,8 +84,7 @@ print(
 switch_by_county <- df_switched %>%
   group_by(county_full, switcher) %>%
   summarise(n = n(), county_designation = last(county_designation)) %>%
-  mutate(sum = sum(n)) %>%
-  mutate(prop = n / sum) %>%
+  mutate(prop = n / sum(n)) %>%
   filter(switcher %in% "Yes") %>%
   rowwise() %>%
   mutate(
@@ -156,28 +150,20 @@ summary(
 )
 
 # Summarize switches by county designation =====================================
-table_2 <- df_switched %>%
+df_switched %>%
   group_by(county_designation, switcher) %>%
   summarise(n = n()) %>%
-  mutate(sum = sum(n)) %>%
-  mutate(prop = n / sum) %>%
+  mutate(prop = n / sum(n)) %>%
+  group_by(county_designation) %>%
+  mutate(n = sum(n)) %>%
   filter(switcher %in% "Yes") %>%
-  select(-switcher, -sum) %>%
-  xtable()
+  mutate(se = sqrt(prop * (1 - prop) / n))
 
-# county_designation     n   prop
-# <fct>              <int>  <dbl>
-#   1 urban              81501 0.0354
-# 2 rural               9396 0.0343
-# 3 frontier            1588 0.0251
-
-names(table_2) <- c("County Designation", "N", "Proportion")
-
-print(
-  table_2,
-  file = here("tab", "switches_county_designation_split.tex"),
-  include.rownames = FALSE, booktabs = TRUE, floating = FALSE
-)
+# county_designation switcher       n   prop       se
+# <fct>              <fct>      <int>  <dbl>    <dbl>
+# 1 urban              Yes      2301411 0.0354 0.000122
+# 2 rural              Yes       273545 0.0343 0.000348
+# 3 frontier           Yes        63333 0.0251 0.000621
 
 # Individual level voting behavior: in 2020 ====================================
 table_3 <- df_switched %>%
