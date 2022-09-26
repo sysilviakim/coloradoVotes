@@ -12,6 +12,8 @@ library(Kmisc)
 library(rlist)
 library(tidymodels)
 library(xtable)
+library(ranger)
+library(MLmetrics)
 
 # Other setups =================================================================
 if (Sys.info()["sysname"] == "Windows") {
