@@ -262,11 +262,13 @@ if (!file.exists(fname)) {
   if (nrows == 100) {
     save(df_switch, file = gsub(".Rda", "_sample.Rda", fname))
   } else {
-    save(df, file = fname)
+    save(df_switch, file = fname)
   }
 } else {
   load(fname)
 }
+
+assert_that(nrow(df_switch) < nrow(df))
 
 # Create county-collapsed version ==============================================
 temp <- table(df$county)

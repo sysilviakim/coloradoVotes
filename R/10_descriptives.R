@@ -1,6 +1,6 @@
 source(here::here("R", "utilities.R"))
-df_switched <- orig <- 
-  loadRData(here("data", "tidy", "multiclass_county_collapsed.Rda"))
+orig <- loadRData(here("data", "tidy", "multiclass_county_collapsed.Rda"))
+df_switched <- loadRData(here("data", "tidy", "switcher.Rda"))
 
 df <- orig %>% select(-county, -in_person_vote_date) %>%
   mutate(party3 = as.character(party))
@@ -26,21 +26,14 @@ pretty_condprob(df, A_var = "gen2020", "In person", B_var = "party", "dem")
 
 # Types of voting patterns =====================================================
 summ <- df %>%
-  mutate(
-    party = as.character(party),
-    party = case_when(
-      party == "dem" | party == "rep" ~ party,
-      TRUE ~ "oth"
-    )
-  ) %>%
-  group_by(gen2020, pri2020, gen2018, pri2018, gen2016, pri2016, party) %>%
+  group_by(gen2020, pri2020, gen2018, pri2018, gen2016, pri2016, party3) %>%
   summarise(n = n()) %>%
   group_by(gen2020, pri2020, gen2018, pri2018, gen2016, pri2016) %>%
   mutate(
     prop = n / sum(n),
     n = sum(n)
   ) %>%
-  pivot_wider(names_from = "party", values_from = c("prop")) %>%
+  pivot_wider(names_from = "party3", values_from = c("prop")) %>%
   arrange(desc(n)) %>%
   select(-oth, everything()) %>%
   mutate(
@@ -56,7 +49,7 @@ temp <- xtable(head(summ, 10), align = "lllllllrrrr")
 names(temp) <- c(
   cross2(c("Gen. ", "Pri. "), c(2020, 2018, 2016)) %>%
     map_chr(~ paste(.x, collapse = "")),
-  "Obs.", "Dem (%)", "Rep (%)", "Others (%)"
+  "Obs.", "Dem. (%)", "Rep. (%)", "Others (%)"
 )
 print(
   temp,
@@ -66,36 +59,36 @@ print(
 
 # If limited to gen2020 in-persons =============================================
 temp <- xtable(
-  head(summ %>% filter(gen2020 == "In person"), 5),
+  head(summ %>% filter(gen2020 == "In person"), 10),
   align = "lllllllrrrr"
 )
 names(temp) <- c(
   cross2(c("Gen. ", "Pri. "), c(2020, 2018, 2016)) %>%
     map_chr(~ paste(.x, collapse = "")),
-  "Obs.", "Dem (%)", "Rep (%)", "Others (%)"
+  "Obs.", "Dem. (%)", "Rep. (%)", "Others (%)"
 )
 print(
   temp,
-  file = here("tab", "top_5_voting_history_in_person.tex"),
+  file = here("tab", "top_10_voting_history_in_person.tex"),
   include.rownames = FALSE, booktabs = TRUE, floating = FALSE
 )
 
 # Summarize switches by county =================================================
 switch_by_county <- df_switched %>%
-  group_by(county_full, switcher) %>%
+  group_by(county, switcher) %>%
   summarise(n = n(), county_designation = last(county_designation)) %>%
   mutate(prop = n / sum(n)) %>%
   filter(switcher %in% "Yes") %>%
   rowwise() %>%
   mutate(
-    county_full = simple_cap(county_full),
+    county = simple_cap(county),
     county_designation = simple_cap(as.character(county_designation))
   ) %>%
   ungroup()
 summary(switch_by_county$prop)
 
 switch_avg <- as.numeric(prop(df_switched, "switcher", digit = 3)[[2]]) / 100
-p <- ggplot(switch_by_county, aes(x = fct_reorder(county_full, desc(prop)))) +
+p <- ggplot(switch_by_county, aes(x = fct_reorder(county, desc(prop)))) +
   geom_col(
     aes(y = prop, color = NULL, fill = county_designation)
   ) +
@@ -141,13 +134,9 @@ pdf(here("fig", "switch_by_county_qq.pdf"), width = 4, height = 2.5)
 print(pdf_default(p2))
 dev.off()
 
-library(normtest)
+library(nortest)
 ad.test(switch_by_county$prop)
 cvm.test(switch_by_county$prop)
-
-summary(
-  lm(as.numeric(switcher) ~ party * county_designation, data = df_switched)
-)
 
 # Summarize switches by county designation =====================================
 df_switched %>%
