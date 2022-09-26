@@ -2,7 +2,51 @@ source(here::here("R", "utilities.R"))
 library(caret)
 library(gbm)
 library(fontcm)
-orig <- loadRData(here("data", "tidy", "multiclass_complete.Rda"))
+
+# Load and setup for filling NA values =========================================
+orig <- loadRData(here("data", "tidy", "multiclass_county_collapsed.Rda"))
+prop(orig, "gen2020")
+# gen2020
+#    Mail In person Not voted 
+#    83.0       5.3      11.7
+
+orig %>% map_dbl(~ sum(is.na(.x)))
+#                voter_id                 gen2020                 pri2020 
+#                       0                       0                       0 
+#                 gen2018                 pri2018                 gen2016 
+#                       0                       0                       0 
+#                 pri2016                 gen2014                 pri2014 
+#                       0                       0                       0 
+# permanent_mail_in_voter     in_person_vote_date       registration_date 
+#                     386                 3515093                     386 
+#           status_reason                  status    residential_zip_code 
+#                     386                     386                     386 
+#       residential_state        residential_city     residential_address 
+#                     386                     386                     386 
+#             state_house            state_senate           congressional 
+#                     386                     386                     386 
+#             county_full             vote_method                   party 
+#                       0                  425478                       0 
+#                  gender                     yob               last_name 
+#                   63619                  224905                       0 
+#              first_name         residential_zip            ballot_style 
+#                      95                     266                  224905 
+#                   phone              preference             middle_name 
+#                     173                     383                     162 
+#              party_hist             county_hist               party_all 
+#                       0                       0                    2253 
+#                     age              age_groups             reg_gen2020 
+#                  224905                  224906                     386 
+#             reg_gen2016             reg_gen2018             reg_gen2014 
+#                     386                     386                     386 
+#             reg_pri2020             reg_pri2016             reg_pri2018 
+#                     386                     386                     386 
+#             reg_pri2014                 reg_bin      county_designation 
+#                     386                       0                       0 
+#             voted_party   received_party_ballot           reject_reason 
+#                 3457075                 2605175                 3672127 
+#                rejected                  county 
+#                       0                       0 
 df <- orig %>% select(-county, -in_person_vote_date)
 assert_that(!any(is.na(df)))
 
@@ -10,7 +54,7 @@ assert_that(!any(is.na(df)))
 ## dp = how much to downsample the majority class?
 dp <- c(0.05, 0.1, 0.2)
 metric <- "prAUC"
-alg <- c("ranger", "gbm")
+alg <- c("gbm", "ranger")
 yvar <- "gen2020"
 
 # Setup and run downsampling ===================================================
