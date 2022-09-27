@@ -1,16 +1,11 @@
 source(here::here("R", "utilities.R"))
-orig <- loadRData(here("data", "tidy", "multiclass_county_collapsed.Rda"))
-df_switched <- loadRData(here("data", "tidy", "switcher.Rda"))
-
-df <- orig %>% select(-county, -in_person_vote_date) %>%
-  mutate(party3 = as.character(party))
-df$party3 <-
-  case_when(df$party3 == "dem" | df$party3 == "rep" ~ df$party, TRUE ~ "oth")
+df <- loadRData(here("data", "tidy", "multiclass_county_collapsed.Rda"))
+df_switched <- loadRData(here("data", "tidy", "switcher.Rda")) %>%
+  filter(!is.na(age_groups))
 ## assert_that(!any(is.na(df)))
 
 # Simple percentages ===========================================================
-temp <- prop(df, c("gen2020", "party3")) %>%
-  xtable()
+temp <- xtable(prop(df, c("gen2020", "party")))
 names(temp) <- c("Democrat", "Republican", "Other")
 
 print(
@@ -26,14 +21,14 @@ pretty_condprob(df, A_var = "gen2020", "In person", B_var = "party", "dem")
 
 # Types of voting patterns =====================================================
 summ <- df %>%
-  group_by(gen2020, pri2020, gen2018, pri2018, gen2016, pri2016, party3) %>%
+  group_by(gen2020, pri2020, gen2018, pri2018, gen2016, pri2016, party) %>%
   summarise(n = n()) %>%
   group_by(gen2020, pri2020, gen2018, pri2018, gen2016, pri2016) %>%
   mutate(
     prop = n / sum(n),
     n = sum(n)
   ) %>%
-  pivot_wider(names_from = "party3", values_from = c("prop")) %>%
+  pivot_wider(names_from = "party", values_from = c("prop")) %>%
   arrange(desc(n)) %>%
   select(-oth, everything()) %>%
   mutate(
@@ -43,8 +38,8 @@ summ <- df %>%
     n = prettyNum(n, big.mark = ",")
   )
 
-# Top 10 types of voting history patterns ======================================
-nrow(summ) ## 565 types
+## Top 10 types of voting history patterns -------------------------------------
+nrow(summ) ## 578 types
 temp <- xtable(head(summ, 10), align = "lllllllrrrr")
 names(temp) <- c(
   cross2(c("Gen. ", "Pri. "), c(2020, 2018, 2016)) %>%
@@ -57,7 +52,7 @@ print(
   include.rownames = FALSE, booktabs = TRUE, floating = FALSE
 )
 
-# If limited to gen2020 in-persons =============================================
+## If limited to gen2020 in-persons --------------------------------------------
 temp <- xtable(
   head(summ %>% filter(gen2020 == "In person"), 10),
   align = "lllllllrrrr"
@@ -73,7 +68,8 @@ print(
   include.rownames = FALSE, booktabs = TRUE, floating = FALSE
 )
 
-# Summarize switches by county =================================================
+# Summarize switches by ========================================================
+## County ----------------------------------------------------------------------
 switch_by_county <- df_switched %>%
   group_by(county, switcher) %>%
   summarise(n = n(), county_designation = last(county_designation)) %>%
@@ -138,7 +134,7 @@ library(nortest)
 ad.test(switch_by_county$prop)
 cvm.test(switch_by_county$prop)
 
-# Summarize switches by county designation =====================================
+## County designation ----------------------------------------------------------
 df_switched %>%
   group_by(county_designation, switcher) %>%
   summarise(n = n()) %>%
@@ -154,36 +150,54 @@ df_switched %>%
 # 2 rural              Yes       273545 0.0343 0.000348
 # 3 frontier           Yes        63333 0.0251 0.000621
 
-# Individual level voting behavior: in 2020 ====================================
-table_3 <- df_switched %>%
-  group_by(switcher, party, county_designation) %>%
+## By county designation x age -------------------------------------------------
+## Will not include designation x party
+p <- df_switched %>%
+  group_by(party, age_groups, switcher) %>%
   summarise(n = n()) %>%
+  ## group_by(age_groups, switcher) %>%
+  group_by(switcher) %>%
   mutate(sum = sum(n)) %>%
   mutate(prop = n / sum) %>%
-  filter(switcher %in% "Yes") %>%
-  ungroup() %>%
-  select(-switcher, -sum) %>%
-  xtable()
+  mutate(
+    party = case_when(
+      party == "dem" ~ "Dem.",
+      party == "rep" ~ "Rep.",
+      TRUE ~ "Others"
+    ),
+    switcher = case_when(
+      switcher == "No" ~ "Not Switched",
+      TRUE ~ "Switched to VBM"
+    ),
+    switcher = factor(switcher, levels = c("Switched to VBM", "Not Switched"))
+  ) %>%
+  ggplot() +
+  geom_bar(
+    ## position = "fill", 
+    stat = "identity",
+    aes(x = age_groups, y = prop, fill = party)
+  ) +
+  xlab("Age Groups") +
+  ylab("") +
+  labs(fill = "Party") +
+  scale_y_continuous(labels = percent) + 
+  facet_wrap(~ switcher) + 
+  scale_fill_manual(
+    values = c("Dem." = "#2166ac", "Rep." = "#b2182b", "Others" = "darkgray")
+    ## ['#b2182b','#ef8a62','#fddbc7','#f7f7f7','#d1e5f0','#67a9cf','#2166ac']
+  )
+p
 
-# party county_designation     n   prop
-# <chr> <fct>              <int>  <dbl>
-#   1 dem   urban              14577 0.899
-# 2 dem   rural               1407 0.0868
-# 3 dem   frontier             228 0.0141
-# 4 oth   urban              30054 0.878
-# 5 oth   rural               3686 0.108
-# 6 oth   frontier             505 0.0147
-# 7 rep   urban              36870 0.877
-# 8 rep   rural               4303 0.102
-# 9 rep   frontier             855 0.0203
-
-names(table_3) <- c("Party", "County Designation", "N", "Proportion")
-
+pdf(here("fig", "switch_by_age_party.pdf"), width = 6, height = 4)
 print(
-  table_3,
-  file = here("tab", "switches_partisan_split.tex"),
-  include.rownames = FALSE, booktabs = TRUE, floating = FALSE
+  pdf_default(p) +
+    theme(
+      axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+      legend.position = "bottom"
+    )
 )
+dev.off()
+
 # Ternary plot =================================================================
 library(ggtern)
 library(fontcm)
