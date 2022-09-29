@@ -14,11 +14,19 @@ names(perf_list) <- alg
 perf_list <- perf_list %>%
   imap(~ set_names(vector("list", length = length(dp)), nm = dp))
 
+for (dpx in dp) {
+  t1 <- multiclass_train_prep(df)
+  t2 <- downSample_custom(t1, p = dpx)
+  save(
+    t2,
+    file = here("data", "tidy", paste0("downsample_list_", dpx * 100, ".Rda"))
+  )
+}
+
 for (algx in alg) {
   for (dpx in dp) {
     ## Data prep
-    t1 <- multiclass_train_prep(df)
-    t2 <- downSample_custom(t1, p = dpx)
+    load(here("data", "tidy", paste0("downsample_list_", dpx * 100, ".Rda")))
     dim(t2$traind)
     prop(t2$traind, yvar)
     fname <- here(
@@ -41,7 +49,7 @@ for (algx in alg) {
 
     # Performance summary
     temp2 <- pred_df(t2, model_down)
-    perf_list[[algx]][[dpx]] <-
+    perf_list[[algx]][[as.character(dpx)]] <-
       multiClassSummary(temp2, lev = levels(t2$test[[yvar]]))
     save(perf_list, file = here("output", "perf_list.Rda"))
 
