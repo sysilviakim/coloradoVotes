@@ -1,6 +1,4 @@
 source(here::here("R", "utilities.R"))
-library(gbm)
-library(caret)
 orig <- loadRData(here("data", "tidy", "switcher.Rda"))
 
 df <- orig %>% select(-in_person_vote_date)

@@ -15,6 +15,8 @@ library(xtable)
 library(caret)
 library(ranger)
 library(MLmetrics)
+library(gbm)
+library(fontcm)
 
 # Other setups =================================================================
 if (Sys.info()["sysname"] == "Windows") {

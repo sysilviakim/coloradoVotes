@@ -1,6 +1,4 @@
 source(here::here("R", "utilities.R"))
-library(gbm)
-library(fontcm)
 df <- loadRData(here("data", "tidy", "gen2020_onehot.Rda"))
 
 # Parameters ===================================================================
