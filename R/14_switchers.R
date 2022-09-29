@@ -3,12 +3,12 @@ orig <- loadRData(here("data", "tidy", "switcher.Rda"))
 
 df <- orig %>% select(-in_person_vote_date)
 assert_that(!any(is.na(df)))
-prop(df, "switchers")
+prop(df, "switcher")
 
 # Parameters ===================================================================
 ## dp = how much to downsample the majority class?
 dp <- c(0.05, 0.1, 0.2)
-metric <- "AUC"
+metric <- "prAUC"
 alg <- c("gbm", "ranger")
 yvar <- "switcher"
 
