@@ -131,5 +131,5 @@ df_onehot_switcher <- bind_cols(df %>% select(switcher), df_onehot_switcher)
 
 save(
   df_onehot_switcher,
-  file = here("data", "tidy", "gen2020_onehot_switcher.Rda")
+  file = here("data", "tidy", "switcher_onehot.Rda")
 )

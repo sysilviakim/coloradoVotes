@@ -1,9 +1,5 @@
 source(here::here("R", "utilities.R"))
-orig <- loadRData(here("data", "tidy", "switcher.Rda"))
-
-df <- orig %>% select(-in_person_vote_date)
-assert_that(!any(is.na(df)))
-prop(df, "switcher")
+df <- loadRData(here("data", "tidy", "switcher_onehot.Rda"))
 
 # Parameters ===================================================================
 ## dp = how much to downsample the majority class?
