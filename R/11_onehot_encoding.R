@@ -118,7 +118,8 @@ df <- orig %>%
     registration_date = as.numeric(registration_date)
   ) %>%
   mutate(across(where(is.character), as.factor)) %>%
-  select(-age)
+  select(-age) %>%
+  select(-gen2020)
 
 df <- left_join(left_join(df, county_covd), county_pres)
 assert_that(!any(is.na(df)))
@@ -126,7 +127,7 @@ assert_that(!any(is.na(df)))
 x <-
   predict(caret::dummyVars(~., df %>% select(-switcher), fullRank = TRUE), df)
 df_onehot_switcher <- as_tibble(x) %>% clean_names()
-df_onehot_switcher <- bind_cols(df %>% select(switcher), df_onehot)
+df_onehot_switcher <- bind_cols(df %>% select(switcher), df_onehot_switcher)
 
 save(
   df_onehot_switcher,
