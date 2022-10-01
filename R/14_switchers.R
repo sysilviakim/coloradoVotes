@@ -52,7 +52,7 @@ for (algx in alg) {
     gc(reset = TRUE)
 
     # Performance summary
-    temp2 <- pred_df(t2, model_down)
+    temp2 <- pred_df(t2, model_down, y = "switcher")
     perf_list[[algx]][[as.character(dpx)]] <-
       multiClassSummary(temp2, lev = levels(t2$test[[yvar]]))
     save(perf_list, file = here("output", "perf_list_switcher.Rda"))
