@@ -154,11 +154,11 @@ multiclass_train_prep <- function(df, class = 3, y = "gen2020") {
     allowParallel = TRUE, verboseIter = FALSE, seeds = rep_seeds(),
     classProbs = TRUE, savePredictions = TRUE
   )
-  
+
   df <- df %>% mutate(across(where(is.factor), as.character))
   df[df == "In person"] <- "In_person"
   df[df == "Not voted"] <- "Not_voted"
-  
+
   ## Train-test split
   set.seed(123)
   x <- createDataPartition(df[[y]], p = 0.8, list = FALSE)
@@ -230,6 +230,91 @@ county_summ <- function(df, group = "winner") {
       not_voted = formatC(mean(not_voted), format = "f", digits = 1),
     )
 }
+
+varimp_labels <- c(
+  "party_oth", "party_rep", "congressional_congressional_2",
+  "congressional_congressional_3", "congressional_congressional_4",
+  "congressional_congressional_5", "congressional_congressional_6",
+  "congressional_congressional_7", "permanent_mail_in_voter_yes",
+  "status_inactive", "countyalamosa", "countyarapahoe", "countyarchuleta",
+  "countybaca", "countybent", "countyboulder", "countybroomfield",
+  "countychaffee", "countycheyenne", "countyclear_creek", "countyconejos",
+  "countycostilla", "countycrowley", "countycuster", "countydelta",
+  "countydenver", "countydolores", "countydouglas", "countyeagle",
+  "countyel_paso", "countyelbert", "countyfremont", "countygarfield",
+  "countygilpin", "countygrand", "countygunnison", "countyhinsdale",
+  "countyhuerfano", "countyjackson", "countyjefferson", "countykiowa",
+  "countykit_carson", "countyla_plata", "countylake", "countylarimer",
+  "countylas_animas", "countylincoln", "countylogan", "countymesa",
+  "countymineral", "countymoffat", "countymontezuma", "countymontrose",
+  "countymorgan", "countyotero", "countyouray", "countypark", "countyphillips",
+  "countypitkin", "countyprowers", "countypueblo", "countyrio_blanco",
+  "countyrio_grande", "countyroutt", "countysaguache", "countysan_juan",
+  "countysan_miguel", "countysedgwick", "countysummit", "countyteller",
+  "countywashington", "countyweld", "countyyuma", "registration_date",
+  "gen2018_in_person", "gen2018_not_voted", "gen2016_in_person",
+  "gen2016_not_voted", "gen2014_in_person", "gen2014_not_voted",
+  "gender_male", "gender_missing", "pri2020_in_person", "pri2020_not_voted",
+  "pri2018_in_person", "pri2018_not_voted", "pri2016_in_person",
+  "pri2016_not_voted", "pri2014_in_person", "pri2014_not_voted",
+  "age_groups_gen_x_41_56", "age_groups_gen_z_18_24",
+  "age_groups_milennial_25_40", "age_groups_missing", "age_groups_silent_75",
+  "county_designation_rural", "county_designation_frontier", "cases_per_10k",
+  "deaths_per_10k", "dem_2016", "rep_2016", "oth_2016", "winner_2016rep"
+) %>%
+  enframe() %>%
+  select(-name) %>%
+  rename(name = value) %>%
+  rowwise() %>%
+  mutate(
+    label = case_when(
+      name == "party_oth" ~ "Party: Other",
+      name == "party_rep" ~ "Party: Republican",
+      name == "permanent_mail_in_voter_yes" ~ "Permanent Mail-in Voter",
+      name == "registration_date" ~ "Registration Date",
+      name == "status_inactive" ~ "Inactive",
+      name == "age_groups_missing" ~ "Age: Missing",
+      name == "age_groups_silent_75" ~ "Silent Generation",
+      name == "gender_male" ~ "Male",
+      name == "gender_missing" ~ "Gender: Missing",
+      name == "cases_per_10k" ~ "County-level Cases per 10,000 on Oct 2020",
+      name == "deaths_per_10k" ~ "County-level Deaths per 10,000 on Oct 2020",
+      name == "dem_2016" ~ "County-level Dem. Presidential Vote Share in 2016",
+      name == "rep_2016" ~ "County-level Rep. Presidential Vote Share in 2016",
+      name == "oth_2016" ~ "County-level Oth. Presidential Vote Share in 2016",
+      name == "winner_2016rep" ~ "County-level Presidential Winner",
+      TRUE ~ name
+    ),
+    label = gsub("_", " ", label),
+    label = case_when(
+      grepl("county", label) ~
+        paste0("County: ", simple_cap(gsub("county", "", label))),
+      grepl("congressional", label) ~
+        paste0("Cong. Dist. ", simple_cap(gsub("congressional ", "", label))),
+      grepl("designation", label) ~
+        paste0(simple_cap(gsub("county designation ", "", label)), " County"),
+      grepl("age group", label) ~ simple_cap(
+        gsub("age groups ", "", trimws(str_remove_all(label, "[0-9]")))
+      ),
+      TRUE ~ label
+    ),
+    label = case_when(
+      grepl("not voted", label) & grepl("pri", label) ~ paste0(
+        "Not Voted in Primary ", trimws(str_remove_all(label, "[a-z]"))
+      ),
+      grepl("not voted", label) & grepl("gen", label) ~ paste0(
+        "Not Voted in General ", trimws(str_remove_all(label, "[a-z]"))
+      ),
+      grepl("in person", label) & grepl("pri", label) ~ paste0(
+        "Voted in-person in Primary ", trimws(str_remove_all(label, "[a-z]"))
+      ),
+      grepl("in person", label) & grepl("gen", label) ~ paste0(
+        "Voted in-person in General ", trimws(str_remove_all(label, "[a-z]"))
+      ),
+      TRUE ~ label
+    )
+  ) %>%
+  ungroup()
 
 # Define file directory ========================================================
 # Need relative paths so not here::here
