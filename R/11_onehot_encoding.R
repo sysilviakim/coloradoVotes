@@ -75,7 +75,8 @@ county_pres <- loadRData(here("data", "tidy", "co_county_pres_wide.Rda")) %>%
   ungroup() %>%
   select(-year) %>%
   rename(dem_2016 = dem, rep_2016 = rep, oth_2016 = oth) %>%
-  mutate(winner_2016 = ifelse(dem_2016 > rep_2016, "dem", "rep"))
+  mutate(winner_2016 = ifelse(dem_2016 > rep_2016, "dem", "rep")) %>%
+  select(-dem_2016)
 
 assert_that(
   all(sort(county_pres$county) == sort(unique(df$county_full)))
