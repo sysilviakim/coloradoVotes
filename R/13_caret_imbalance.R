@@ -57,6 +57,31 @@ for (algx in alg) {
   }
 }
 
+# Performance assessment =======================================================
+perf_list %>%
+  map_dfr(
+    function(x) {
+      x %>%
+        compact() %>%
+        imap_dfr(~ enframe(.x) %>% mutate(dp = .y))
+    },
+    .id = "algorithm"
+  ) %>%
+  pivot_wider(
+    id_cols = c("dp", "algorithm"), names_from = "name", values_from = "value"
+  ) %>%
+  arrange(desc(prAUC))
+
+## gradient boosting with 20% downsampling best; load
+algx <- "gbm"
+dpx <- 0.2
+load(here(
+  "output",
+  paste0(algx, "_caret_", metric, "_downsample_", dpx * 100, ".Rda")
+))
+load(here("data", "tidy", paste0("downsample_list_", dpx * 100, ".Rda")))
+temp2 <- pred_df(t2, model_down)
+
 # Importance ===================================================================
 varImp(model_down)
 
@@ -65,23 +90,15 @@ pdf_varimp(
   model_down,
   filename = here(
     "fig",
-    paste0(alg, "_caret_", metric, "_downsample_", dp * 100, "_varimp.pdf")
+    paste0(algx, "_caret_", metric, "_downsample_", dpx * 100, "_varimp.pdf")
   ),
   font = "CM Roman",
-  # labels = rev(
-  #   c(
-  #     "Reg. date",
-  #     "Voted by mail at pri. 2020",
-  #     "Inactive",
-  #     "Did not vote at gen. 2016",
-  #     "Voted by mail at gen. 2018",
-  #     "Did not vote at pri. 2020",
-  #     "Voted by mail at gen. 2016",
-  #     "Did not vote at gen. 2018",
-  #     "Year of birth",
-  #     "Republican"
-  #   )
-  # ),
+  labels = varimp_labels %>%
+    filter(
+      name %in% (varImp(model_down)$importance %>%
+        arrange(desc(Overall)) %>% head(10) %>% rownames())
+    ) %>%
+    .$label,
   width = 5, height = 3
 )
 
