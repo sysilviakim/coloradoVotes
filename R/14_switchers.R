@@ -14,20 +14,30 @@ names(perf_list) <- alg
 perf_list <- perf_list %>%
   imap(~ set_names(vector("list", length = length(dp)), nm = dp))
 
+for (dpx in dp) {
+  t1 <- multiclass_train_prep(df, y = "switcher")
+  t2 <- downSample_custom(t1, p = dpx, majority = "No", y = "switcher")
+  save(
+    t2,
+    file = here(
+      "data", "tidy", paste0("downsample_list_switcher_", dpx * 100, ".Rda")
+    )
+  )
+}
+
 for (algx in alg) {
   for (dpx in dp) {
     ## Data prep
-    t1 <- multiclass_train_prep(df, y = "switcher")
-    t2 <- downSample_custom(t1, p = dpx, majority = "No", y = "switcher")
-    t2$traind <- t2$traind %>% select(-gen2020)
-
+    load(here(
+      "data", "tidy", paste0("downsample_list_switcher_", dpx * 100, ".Rda")
+    ))
     dim(t2$traind)
     prop(t2$traind, yvar)
     fname <- here(
       "output",
       paste0(algx, "_caret_", metric, "_downsample_", dpx * 100, "_switch.Rda")
     )
-    
+
     ## Run and save
     if (!file.exists(fname)) {
       model_down <- train(
@@ -38,15 +48,15 @@ for (algx in alg) {
     } else {
       load(fname)
     }
-    
+
     gc(reset = TRUE)
-    
+
     # Performance summary
     temp2 <- pred_df(t2, model_down)
-    perf_list[[algx]][[dpx]] <- 
+    perf_list[[algx]][[as.character(dpx)]] <-
       multiClassSummary(temp2, lev = levels(t2$test[[yvar]]))
     save(perf_list, file = here("output", "perf_list_switcher.Rda"))
-    
+
     message(paste0("Task finished: ", algx, ", ", dpx, "."))
   }
 }
@@ -92,4 +102,3 @@ pdf(
 )
 print(pdf_default(autoplot(x)))
 dev.off()
-
