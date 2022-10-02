@@ -58,6 +58,7 @@ for (algx in alg) {
 }
 
 # Performance assessment =======================================================
+load(here("output", "perf_list.Rda"))
 perf_list %>%
   map_dfr(
     function(x) {
@@ -84,6 +85,10 @@ temp2 <- pred_df(t2, model_down)
 
 # Importance ===================================================================
 varImp(model_down)
+lab <- varImp(model_down)$importance %>%
+  arrange(desc(Overall)) %>%
+  head(10) %>%
+  rownames()
 
 ## Export; manual label added
 pdf_varimp(
@@ -94,10 +99,9 @@ pdf_varimp(
   ),
   font = "CM Roman",
   labels = varimp_labels %>%
-    filter(
-      name %in% (varImp(model_down)$importance %>%
-        arrange(desc(Overall)) %>% head(10) %>% rownames())
-    ) %>%
+    filter(name %in% lab) %>%
+    mutate(name = factor(name, levels = lab)) %>%
+    arrange(desc(name)) %>%
     .$label,
   width = 5, height = 3
 )
@@ -108,7 +112,7 @@ x <- x %>% mutate(.level = gsub("_", " ", .level))
 pdf(
   here(
     "fig",
-    paste0(alg, "_caret_", metric, "_downsample_", dp * 100, "_roc_curve.pdf")
+    paste0(algx, "_caret_", metric, "_downsample_", dpx * 100, "_roc_curve.pdf")
   ),
   width = 6, height = 3
 )
@@ -120,7 +124,7 @@ x <- x %>% mutate(.level = gsub("_", " ", .level))
 pdf(
   here(
     "fig",
-    paste0(alg, "_caret_", metric, "_downsample_", dp * 100, "_pr_curve.pdf")
+    paste0(algx, "_caret_", metric, "_downsample_", dpx * 100, "_pr_curve.pdf")
   ),
   width = 6, height = 3
 )
