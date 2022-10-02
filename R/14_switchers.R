@@ -84,8 +84,10 @@ load(here(
   "output",
   paste0(algx, "_caret_", metric, "_downsample_", dpx * 100, "_switch.Rda")
 ))
-load(here("data", "tidy", paste0("downsample_list_", dpx * 100, ".Rda")))
-temp2 <- pred_df(t2, model_down)
+load(here(
+  "data", "tidy", paste0("downsample_list_switcher_", dpx * 100, ".Rda")
+))
+temp2 <- pred_df(t2, model_down, y = "switcher")
 
 # Importance ===================================================================
 varImp(model_down)
@@ -113,8 +115,7 @@ pdf_varimp(
 )
 
 ## yardstick figures
-x <- roc_curve(temp2, obs, In_person, Mail, Not_voted)
-x <- x %>% mutate(.level = gsub("_", " ", .level))
+x <- roc_curve(temp2, obs, No)
 pdf(
   here(
     "fig",
@@ -128,8 +129,7 @@ pdf(
 print(pdf_default(autoplot(x)))
 dev.off()
 
-x <- pr_curve(temp2, obs, In_person, Mail, Not_voted)
-x <- x %>% mutate(.level = gsub("_", " ", .level))
+x <- pr_curve(temp2, obs, No)
 pdf(
   here(
     "fig",
