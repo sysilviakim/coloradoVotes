@@ -1,0 +1,12 @@
+# LSBATCH: User input
+#!/bin/bash
+
+#BSUB -J co
+#BSUB -q long
+#BSUB -o %J_output.txt
+#BSUB -e %J_error.txt
+#BSUB -u sskim@american.edu
+#BSUB -B
+#BSUB -N
+
+/app/R-4.0.2/bin/R CMD BATCH R/13_caret_imbalance.R
