@@ -3,7 +3,7 @@ df <- loadRData(here("data", "tidy", "gen2020_onehot.Rda"))
 
 # Parameters ===================================================================
 ## dp = how much to downsample the majority class?
-dp <- c(0.05, 0.1, 0.2)
+dp <- seq(0.05, 0.5, by = 0.05)
 metric <- "prAUC"
 alg <- c("gbm", "ranger")
 yvar <- "gen2020"
