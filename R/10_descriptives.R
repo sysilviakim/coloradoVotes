@@ -5,13 +5,18 @@ df_switched <- loadRData(here("data", "tidy", "switcher.Rda")) %>%
 ## assert_that(!any(is.na(df)))
 
 # Percentages / conditional probabilities ======================================
+prop(df, "gen2020")
+prop(df_switched, "switcher")
+table(df$gen2020)
+table(df_switched$switcher)
+
 temp <- xtable(prop(df, c("gen2020", "party")))
 names(temp) <- c("Democrat", "Republican", "Other")
 
 print(
   temp,
   file = here("tab", "prop_table.tex"),
-  include.rownames = FALSE, booktabs = TRUE, floating = FALSE
+  booktabs = TRUE, floating = FALSE
 )
 
 pretty_condprob(df, A_var = "gen2020", "In person", B_var = "party", "rep")
@@ -204,6 +209,10 @@ print(
 )
 dev.off()
 
+df %>% 
+  group_by(gen2020) %>%
+  summarise(mean_age = mean(age, na.rm = TRUE))
+
 ## By party x registration date ================================================
 df[["reg_month"]] <- case_when(
   year(df$registration_date) < 2017 ~ NA_Date_,
@@ -382,6 +391,10 @@ print(
     )
 )
 dev.off()
+
+df_switched %>% 
+  group_by(switcher) %>%
+  summarise(mean_age = mean(age, na.rm = TRUE))
 
 ## By party x registration date ================================================
 df_switched[["reg_month"]] <- case_when(
