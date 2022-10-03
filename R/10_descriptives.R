@@ -4,7 +4,7 @@ df_switched <- loadRData(here("data", "tidy", "switcher.Rda")) %>%
   filter(!is.na(age_groups))
 ## assert_that(!any(is.na(df)))
 
-# Simple percentages ===========================================================
+# Percentages / conditional probabilities ======================================
 temp <- xtable(prop(df, c("gen2020", "party")))
 names(temp) <- c("Democrat", "Republican", "Other")
 
@@ -19,13 +19,23 @@ pretty_condprob(df, A_var = "gen2020", "In person", B_var = "party", "rep")
 pretty_condprob(df, A_var = "gen2020", "In person", B_var = "party", "dem")
 ## Cond. on party == dem, Pr(gen2020 == In person) is 3.4%
 
+pretty_condprob(df_switched, A_var = "switcher", "Yes", B_var = "party", "rep")
+## Cond. on party == rep, Pr(switcher == Yes) is 5.2%
+pretty_condprob(df_switched, A_var = "switcher", "Yes", B_var = "party", "dem")
+## Cond. on party == dem, Pr(switcher == Yes) is 1.9%
+
+pretty_condprob(df, A_var = "gen2020", "In person", B_var = "reg_bin", "EDR")
+## Cond. on reg_bin == EDR, Pr(gen2020 == In person) is 92.9%
+pretty_condprob(df_switched, A_var = "switcher", "Yes", B_var = "reg_bin", "EDR")
+## Cond. on reg_bin == EDR, Pr(switcher == Yes) is 89.1%
+
 # Types of voting patterns =====================================================
 summ <- df %>%
   group_by(gen2020, pri2020, gen2018, pri2018, gen2016, pri2016, party) %>%
   summarise(n = n()) %>%
   group_by(gen2020, pri2020, gen2018, pri2018, gen2016, pri2016) %>%
   mutate(
-    prop = n / sum(n),
+    prop = n / sum(n, na.rm = TRUE),
     n = sum(n)
   ) %>%
   pivot_wider(names_from = "party", values_from = c("prop")) %>%
@@ -38,7 +48,7 @@ summ <- df %>%
     n = prettyNum(n, big.mark = ",")
   )
 
-## Top 10 types of voting history patterns -------------------------------------
+## Top 10 types of voting history patterns =====================================
 nrow(summ) ## 578 types
 temp <- xtable(head(summ, 10), align = "lllllllrrrr")
 names(temp) <- c(
@@ -52,7 +62,7 @@ print(
   include.rownames = FALSE, booktabs = TRUE, floating = FALSE
 )
 
-## If limited to gen2020 in-persons --------------------------------------------
+## If limited to gen2020 in-persons ============================================
 temp <- xtable(
   head(summ %>% filter(gen2020 == "In person"), 10),
   align = "lllllllrrrr"
@@ -69,12 +79,12 @@ print(
 )
 
 # Summarize switches by ========================================================
-## County ----------------------------------------------------------------------
+## County ======================================================================
 switch_by_county <- df_switched %>%
   group_by(county, switcher) %>%
   summarise(n = n(), county_designation = last(county_designation)) %>%
-  mutate(prop = n / sum(n)) %>%
-  filter(switcher %in% "Yes") %>%
+  mutate(prop = n / sum(n, na.rm = TRUE)) %>%
+  filter(switcher == "Yes") %>%
   rowwise() %>%
   mutate(
     county = simple_cap(county),
@@ -112,8 +122,8 @@ dev.off()
 
 p1 <- ggplot(switch_by_county, aes(prop)) +
   geom_density() +
-  scale_x_continuous(labels = percent) + 
-  xlab("Proportion of Switchers") + 
+  scale_x_continuous(labels = percent) +
+  xlab("Proportion of Switchers") +
   ylab("Density")
 
 pdf(here("fig", "switch_by_county_density.pdf"), width = 4, height = 2.5)
@@ -121,8 +131,8 @@ print(pdf_default(p1))
 dev.off()
 
 p2 <- ggplot(switch_by_county, aes(sample = prop)) +
-  stat_qq() + 
-  stat_qq_line() + 
+  stat_qq() +
+  stat_qq_line() +
   xlab("Theoretical Quantiles") +
   ylab("Switcher Proportion's Quantiles")
 
@@ -134,13 +144,13 @@ library(nortest)
 ad.test(switch_by_county$prop)
 cvm.test(switch_by_county$prop)
 
-## County designation ----------------------------------------------------------
+## County designation ==========================================================
 df_switched %>%
   group_by(county_designation, switcher) %>%
   summarise(n = n()) %>%
-  mutate(prop = n / sum(n)) %>%
+  mutate(prop = n / sum(n, na.rm = TRUE)) %>%
   group_by(county_designation) %>%
-  mutate(n = sum(n)) %>%
+  mutate(n = sum(n, na.rm = TRUE)) %>%
   filter(switcher %in% "Yes") %>%
   mutate(se = sqrt(prop * (1 - prop) / n))
 
@@ -150,14 +160,14 @@ df_switched %>%
 # 2 rural              Yes       273545 0.0343 0.000348
 # 3 frontier           Yes        63333 0.0251 0.000621
 
-## By county designation x age -------------------------------------------------
+## By party x age ==============================================================
 ## Will not include designation x party
 p <- df_switched %>%
   group_by(party, age_groups, switcher) %>%
   summarise(n = n()) %>%
   ## group_by(age_groups, switcher) %>%
   group_by(switcher) %>%
-  mutate(sum = sum(n)) %>%
+  mutate(sum = sum(n, na.rm = TRUE)) %>%
   mutate(prop = n / sum) %>%
   mutate(
     party = case_when(
@@ -167,21 +177,24 @@ p <- df_switched %>%
     ),
     switcher = case_when(
       switcher == "No" ~ "Not Switched",
-      TRUE ~ "Switched to VBM"
+      TRUE ~ "Switched to In-person"
     ),
-    switcher = factor(switcher, levels = c("Switched to VBM", "Not Switched"))
+    switcher = factor(
+      switcher,
+      levels = c("Switched to In-person", "Not Switched")
+    )
   ) %>%
   ggplot() +
   geom_bar(
-    ## position = "fill", 
+    ## position = "fill",
     stat = "identity",
     aes(x = age_groups, y = prop, fill = party)
   ) +
   xlab("Age Groups") +
   ylab("") +
   labs(fill = "Party") +
-  scale_y_continuous(labels = percent) + 
-  facet_wrap(~ switcher) + 
+  scale_y_continuous(labels = percent) +
+  facet_wrap(~switcher) +
   scale_fill_manual(
     values = c("Dem." = "#2166ac", "Rep." = "#b2182b", "Others" = "darkgray")
     ## ['#b2182b','#ef8a62','#fddbc7','#f7f7f7','#d1e5f0','#67a9cf','#2166ac']
@@ -196,6 +209,57 @@ print(
       legend.position = "bottom"
     )
 )
+dev.off()
+
+## By party x registration date ================================================
+df_switched[["reg_month"]] <- case_when(
+  year(df_switched$registration_date) < 2017 ~ NA_Date_,
+  TRUE ~ as.Date(floor_date(df_switched$registration_date, unit = "month"))
+)
+
+p <- df_switched %>%
+  filter(!is.na(reg_month)) %>%
+  group_by(party, reg_month, switcher) %>%
+  summarise(n = n()) %>%
+  group_by(switcher) %>%
+  mutate(sum = sum(n, na.rm = TRUE)) %>%
+  mutate(prop = n / sum) %>%
+  mutate(
+    party = case_when(
+      party == "dem" ~ "Dem.",
+      party == "rep" ~ "Rep.",
+      TRUE ~ "Others"
+    ),
+    switcher = case_when(
+      switcher == "No" ~ "Not Switched",
+      TRUE ~ "Switched to In-person"
+    ),
+    switcher = factor(
+      switcher,
+      levels = c("Switched to In-person", "Not Switched")
+    )
+  ) %>%
+  ggplot() +
+  geom_bar(
+    stat = "identity", width = 20,
+    aes(x = reg_month, y = prop, fill = party)
+  ) +
+  xlab("Registration Months for Post-2016 Registrants") +
+  ylab("") +
+  labs(fill = "Party") +
+  scale_y_continuous(labels = percent) +
+  facet_wrap(~switcher) +
+  scale_fill_manual(
+    values = c("Dem." = "#2166ac", "Rep." = "#b2182b", "Others" = "darkgray")
+  ) +
+  scale_x_date(
+    breaks = seq(as.Date("2017-01-01"), as.Date("2020-12-25"), by = "year"),
+    date_labels = "%Y"
+  )
+p
+
+pdf(here("fig", "switch_by_reg_month_party.pdf"), width = 6, height = 4)
+print(pdf_default(p) + theme(legend.position = "bottom"))
 dev.off()
 
 # Ternary plot =================================================================
