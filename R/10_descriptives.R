@@ -78,6 +78,176 @@ print(
   include.rownames = FALSE, booktabs = TRUE, floating = FALSE
 )
 
+# Summarize in-person voting by ================================================
+## County ======================================================================
+inperson_by_county <- df %>%
+  group_by(county_full, gen2020) %>%
+  summarise(n = n(), county_designation = last(county_designation)) %>%
+  mutate(prop = n / sum(n, na.rm = TRUE)) %>%
+  filter(gen2020 == "In person") %>%
+  rowwise() %>%
+  mutate(
+    county = simple_cap(county_full),
+    county_designation = simple_cap(as.character(county_designation))
+  ) %>%
+  ungroup()
+summary(inperson_by_county$prop)
+
+inperson_avg <- as.numeric(prop(df, "gen2020", digit = 3)[[2]]) / 100
+p <- ggplot(inperson_by_county, aes(x = fct_reorder(county, desc(prop)))) +
+  geom_col(
+    aes(y = prop, color = NULL, fill = county_designation)
+  ) +
+  scale_y_continuous(labels = percent) +
+  scale_fill_viridis_d(end = 0.9, direction = -1) +
+  xlab("Counties") +
+  ylab("Proportion of In-person Votes") +
+  labs(fill = "Designation") +
+  geom_hline(yintercept = inperson_avg) +
+  annotate(
+    geom = "text", x = 50, y = 0.04, family = "CM Roman",
+    label = paste0(
+      "Average: ", formatC(inperson_avg * 100, digits = 2, format = "f"), "%"
+    )
+  )
+p
+
+pdf(here("fig", "inperson_by_county.pdf"), width = 8.5, height = 4)
+print(
+  pdf_default(p) +
+    theme(
+      axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+      legend.position = c(0.9, 0.8)
+    )
+)
+dev.off()
+
+p1 <- ggplot(inperson_by_county, aes(prop)) +
+  geom_density() +
+  scale_x_continuous(labels = percent) +
+  xlab("Proportion of In-person Votes") +
+  ylab("Density")
+
+pdf(here("fig", "inperson_by_county_density.pdf"), width = 4, height = 2.5)
+print(pdf_default(p1))
+dev.off()
+
+p2 <- ggplot(inperson_by_county, aes(sample = prop)) +
+  stat_qq() +
+  stat_qq_line() +
+  xlab("Theoretical Quantiles") +
+  ylab("In-person Vote Proportion's Quantiles")
+
+pdf(here("fig", "inperson_by_county_qq.pdf"), width = 4, height = 2.5)
+print(pdf_default(p2))
+dev.off()
+
+library(nortest)
+ad.test(inperson_by_county$prop)
+cvm.test(inperson_by_county$prop)
+
+## County designation ==========================================================
+df %>%
+  group_by(county_designation, gen2020) %>%
+  summarise(n = n()) %>%
+  mutate(prop = n / sum(n, na.rm = TRUE)) %>%
+  group_by(county_designation) %>%
+  mutate(n = sum(n, na.rm = TRUE)) %>%
+  filter(gen2020 == "In person") %>%
+  mutate(se = sqrt(prop * (1 - prop) / n))
+
+# county_designation   switcher       n   prop       se
+# <fct>                <fct>      <int>  <dbl>    <dbl>
+# 1 urban              In person 3246409 0.0541 0.000126
+# 2 rural              In person  379614 0.0504 0.000355
+# 3 frontier           In person   87000 0.0377 0.000646
+
+## By party x age ==============================================================
+## Will not include designation x party
+p <- df %>%
+  group_by(party, age_groups, gen2020) %>%
+  filter(!is.na(age_groups)) %>%
+  summarise(n = n()) %>%
+  group_by(gen2020) %>%
+  mutate(sum = sum(n, na.rm = TRUE)) %>%
+  mutate(prop = n / sum) %>%
+  mutate(
+    party = case_when(
+      party == "dem" ~ "Dem.",
+      party == "rep" ~ "Rep.",
+      TRUE ~ "Others"
+    ),
+    gen2020 = factor(gen2020, levels = c("In person", "Mail", "Not voted"))
+  ) %>%
+  ggplot() +
+  geom_bar(
+    stat = "identity",
+    aes(x = age_groups, y = prop, fill = party)
+  ) +
+  xlab("Age Groups") +
+  ylab("") +
+  labs(fill = "Party") +
+  scale_y_continuous(labels = percent) +
+  facet_wrap(~gen2020) +
+  scale_fill_manual(
+    values = c("Dem." = "#2166ac", "Rep." = "#b2182b", "Others" = "darkgray")
+  )
+p
+
+pdf(here("fig", "inperson_by_age_party.pdf"), width = 6, height = 4)
+print(
+  pdf_default(p) +
+    theme(
+      axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+      legend.position = "bottom"
+    )
+)
+dev.off()
+
+## By party x registration date ================================================
+df[["reg_month"]] <- case_when(
+  year(df$registration_date) < 2017 ~ NA_Date_,
+  TRUE ~ as.Date(floor_date(df$registration_date, unit = "month"))
+)
+
+p <- df %>%
+  filter(!is.na(reg_month)) %>%
+  group_by(party, reg_month, gen2020) %>%
+  summarise(n = n()) %>%
+  group_by(gen2020) %>%
+  mutate(sum = sum(n, na.rm = TRUE)) %>%
+  mutate(prop = n / sum) %>%
+  mutate(
+    party = case_when(
+      party == "dem" ~ "Dem.",
+      party == "rep" ~ "Rep.",
+      TRUE ~ "Others"
+    ),
+    gen2020 = factor(gen2020, levels = c("In person", "Mail", "Not voted"))
+  ) %>%
+  ggplot() +
+  geom_bar(
+    stat = "identity", width = 20,
+    aes(x = reg_month, y = prop, fill = party)
+  ) +
+  xlab("Registration Months for Post-2016 Registrants") +
+  ylab("") +
+  labs(fill = "Party") +
+  scale_y_continuous(labels = percent) +
+  facet_wrap(~gen2020) +
+  scale_fill_manual(
+    values = c("Dem." = "#2166ac", "Rep." = "#b2182b", "Others" = "darkgray")
+  ) +
+  scale_x_date(
+    breaks = seq(as.Date("2017-01-01"), as.Date("2020-12-25"), by = "year"),
+    date_labels = "%Y"
+  )
+p
+
+pdf(here("fig", "inperson_by_reg_month_party.pdf"), width = 6, height = 4)
+print(pdf_default(p) + theme(legend.position = "bottom"))
+dev.off()
+
 # Summarize switches by ========================================================
 ## County ======================================================================
 switch_by_county <- df_switched %>%
@@ -106,7 +276,9 @@ p <- ggplot(switch_by_county, aes(x = fct_reorder(county, desc(prop)))) +
   geom_hline(yintercept = switch_avg) +
   annotate(
     geom = "text", x = 50, y = 0.04, family = "CM Roman",
-    label = paste0("Average: ", switch_avg * 100, "%")
+    label = paste0(
+      "Average: ", formatC(switch_avg * 100, digits = 2, format = "f"), "%"
+    )
   )
 p
 
@@ -151,7 +323,7 @@ df_switched %>%
   mutate(prop = n / sum(n, na.rm = TRUE)) %>%
   group_by(county_designation) %>%
   mutate(n = sum(n, na.rm = TRUE)) %>%
-  filter(switcher %in% "Yes") %>%
+  filter(switcher == "Yes") %>%
   mutate(se = sqrt(prop * (1 - prop) / n))
 
 # county_designation switcher       n   prop       se
