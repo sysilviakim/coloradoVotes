@@ -63,7 +63,7 @@ for (algx in alg) {
 
 # Performance assessment =======================================================
 load(here("output", "perf_list_switcher.Rda"))
-perf_list %>%
+temp <- perf_list %>%
   map_dfr(
     function(x) {
       x %>%
@@ -74,12 +74,24 @@ perf_list %>%
   ) %>%
   pivot_wider(
     id_cols = c("dp", "algorithm"), names_from = "name", values_from = "value"
-  ) %>%
-  arrange(desc(prAUC))
+  )
+
+temp %>% arrange(desc(prAUC))
+
+print(
+  xtable(
+    temp %>% 
+      filter(algorithm == "gbm") %>% 
+      select(-algorithm, -contains("Value"), -contains("Balanced"), -Recall),
+    digits = 3
+  ),
+  file = here("tab", "perf_summ_switcher.tex"),
+  include.rownames = FALSE, booktabs = TRUE, floating = FALSE
+)
 
 ## gradient boosting with 20% downsampling best; load
 algx <- "gbm"
-dpx <- 0.2
+dpx <- 0.35
 load(here(
   "output",
   paste0(algx, "_caret_", metric, "_downsample_", dpx * 100, "_switch.Rda")
@@ -124,7 +136,7 @@ pdf(
       "_roc_curve_switch.pdf"
     )
   ),
-  width = 6, height = 3
+  width = 3, height = 3
 )
 print(pdf_default(autoplot(x)))
 dev.off()
@@ -137,7 +149,9 @@ pdf(
       algx, "_caret_", metric, "_downsample_", dpx * 100, "_pr_curve_switch.pdf"
     )
   ),
-  width = 6, height = 3
+  width = 3, height = 3
 )
 print(pdf_default(autoplot(x)))
 dev.off()
+
+# 

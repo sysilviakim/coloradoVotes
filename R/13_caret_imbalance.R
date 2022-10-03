@@ -59,7 +59,7 @@ for (algx in alg) {
 
 # Performance assessment =======================================================
 load(here("output", "perf_list.Rda"))
-perf_list %>%
+temp <- perf_list %>%
   map_dfr(
     function(x) {
       x %>%
@@ -70,8 +70,22 @@ perf_list %>%
   ) %>%
   pivot_wider(
     id_cols = c("dp", "algorithm"), names_from = "name", values_from = "value"
-  ) %>%
-  arrange(desc(prAUC))
+  )
+
+temp %>% arrange(desc(prAUC))
+
+print(
+  xtable(
+    temp %>% 
+      filter(algorithm == "gbm") %>% 
+      select(
+        -algorithm, -contains("Value"), -contains("Balanced"), -Mean_Recall
+      ),
+    digits = 3
+  ),
+  file = here("tab", "perf_summ.tex"),
+  include.rownames = FALSE, booktabs = TRUE, floating = FALSE
+)
 
 ## gradient boosting with 20% downsampling best; load
 algx <- "gbm"
