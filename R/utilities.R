@@ -191,22 +191,23 @@ downSample_custom <- function(list, p = .5, majority = "Mail", y = "gen2020") {
   return(list)
 }
 
-ternary_extra <- function(p) {
+ternary_extra <- function(p, label = c("", "")) {
   p <- p +
     labs(color = "Outcome", shape = "Year") +
-    xlab("No Turnout") +
-    ylab("Mail") +
-    zlab("In Person") +
+    xlab("Mail") +
+    ylab("In-Person") +
+    zlab("Not Voted") +
     theme_bw() +
     theme_arrownormal() +
     geom_line(aes(group = county), size = 0.2, alpha = 0.1) +
-    scale_color_brewer(palette = "Set1", direction = -1) +
+    scale_color_manual(values = c("Dem" = "#2166ac", "Rep" = "#b2182b")) +
     annotate(
       geom = "text",
       x = c(0.45, 0.1),
       y = c(0.45, 0.45),
       z = c(0.1, 0.45),
-      label = c("No Turnout", "In Person"),
+      label = label,
+      ## label = c("No Turnout", "In Person"),
       family = "CM Roman"
     )
   return(p)
@@ -315,6 +316,23 @@ varimp_labels <- c(
     )
   ) %>%
   ungroup()
+
+# county-level summary for descriptive data
+desc_county <- function(df, county = "county_full",
+                        y = "gen2020",
+                        fill = "county_designation") {
+  df %>%
+    group_by(!!as.name(county), !!as.name(y)) %>%
+    summarise(n = n(), county_designation = last(county_designation)) %>%
+    mutate(prop = n / sum(n, na.rm = TRUE)) %>%
+    filter(!!as.name(y) == "In person") %>%
+    rowwise() %>%
+    mutate(
+      county = simple_cap(!!as.name(county)),
+      !!as.name(fill) := simple_cap(as.character(!!as.name(fill)))
+    ) %>%
+    ungroup()
+}
 
 # Define file directory ========================================================
 # Need relative paths so not here::here
