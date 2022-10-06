@@ -127,7 +127,7 @@ pdf_varimp(
 )
 
 ## yardstick figures
-x <- roc_curve(temp2, obs, No)
+x <- roc_curve(temp2, obs, Yes)
 pdf(
   here(
     "fig",
@@ -141,7 +141,7 @@ pdf(
 print(pdf_default(autoplot(x)))
 dev.off()
 
-x <- pr_curve(temp2, obs, No)
+x <- pr_curve(temp2, obs, Yes)
 pdf(
   here(
     "fig",
