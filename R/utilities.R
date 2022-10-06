@@ -318,20 +318,60 @@ varimp_labels <- c(
   ungroup()
 
 # county-level summary for descriptive data
-desc_county <- function(df, county = "county_full",
-                        y = "gen2020",
-                        fill = "county_designation") {
+desc_county <- function(df, county, y, fill) {
+  v <- ifelse(
+    y == "gen2020",
+    "In person",
+    "Yes"
+  )
   df %>%
     group_by(!!as.name(county), !!as.name(y)) %>%
-    summarise(n = n(), county_designation = last(county_designation)) %>%
+    summarise(n = n(), !!as.name(fill) := last(!!as.name(fill))) %>%
     mutate(prop = n / sum(n, na.rm = TRUE)) %>%
-    filter(!!as.name(y) == "In person") %>%
+    filter(!!as.name(y) == v) %>%
     rowwise() %>%
     mutate(
       county = simple_cap(!!as.name(county)),
       !!as.name(fill) := simple_cap(as.character(!!as.name(fill)))
     ) %>%
     ungroup()
+}
+
+county_stacked_plot <- function(df, 
+                                y = "gen2020",
+                                fill = "county_designation",
+                                xint = 50,
+                                yint = 0.04,
+                                county = "county_full") {
+  ylab <- ifelse(
+    y == "gen2020",
+    "Proportion of In-person Votes",
+    "Proportion of Switchers"
+  )
+  labfill <- ifelse(
+    fill == "county_designation", 
+    "Designation",
+    "COVID-19 Cases Per 10,000"
+  )
+  
+  df_summ <- desc_county(df = df, county = county, y = y, fill = fill)
+  
+  avg_num <- as.numeric(prop(df, y, digit = 3)[[2]]) / 100
+  p <- ggplot(df_summ, aes(x = fct_reorder(county, desc(prop)))) +
+    geom_col(aes(y = prop, color = NULL, fill = !!as.name(fill))) +
+    scale_y_continuous(labels = percent) +
+    scale_fill_viridis_d(end = 0.9, direction = -1) +
+    xlab("Counties") +
+    ylab(ylab) +
+    labs(fill = labfill) +
+    geom_hline(yintercept = avg_num) +
+    annotate(
+      geom = "text", x = xint, y = yint, family = "CM Roman",
+      label = paste0(
+        "Average: ", formatC(avg_num * 100, digits = 2, format = "f"), "%"
+      )
+    )
+  return(p)
 }
 
 # Define file directory ========================================================

@@ -129,31 +129,9 @@ print(
 
 # Summarize in-person voting by ================================================
 ## County ======================================================================
-inperson_by_county <- desc_county(df)
-summary(inperson_by_county$prop)
-
-inperson_avg <- as.numeric(prop(df, "gen2020", digit = 3)[[2]]) / 100
-p <- ggplot(inperson_by_county, aes(x = fct_reorder(county, desc(prop)))) +
-  geom_col(
-    aes(y = prop, color = NULL, fill = county_designation)
-  ) +
-  scale_y_continuous(labels = percent) +
-  scale_fill_viridis_d(end = 0.9, direction = -1) +
-  xlab("Counties") +
-  ylab("Proportion of In-person Votes") +
-  labs(fill = "Designation") +
-  geom_hline(yintercept = inperson_avg) +
-  annotate(
-    geom = "text", x = 50, y = 0.04, family = "CM Roman",
-    label = paste0(
-      "Average: ", formatC(inperson_avg * 100, digits = 2, format = "f"), "%"
-    )
-  )
-p
-
 pdf(here("fig", "inperson_by_county.pdf"), width = 8.5, height = 4)
 print(
-  pdf_default(p) +
+  pdf_default(county_stacked_plot(df)) +
     theme(
       axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
       legend.position = c(0.9, 0.8)
@@ -295,28 +273,7 @@ dev.off()
 
 # Summarize switches by ========================================================
 ## County ======================================================================
-switch_by_county <- desc_county(df_switched, county = "county", y = "switcher")
-summary(switch_by_county$prop)
-
-switch_avg <- as.numeric(prop(df_switched, "switcher", digit = 3)[[2]]) / 100
-p <- ggplot(switch_by_county, aes(x = fct_reorder(county, desc(prop)))) +
-  geom_col(
-    aes(y = prop, color = NULL, fill = county_designation)
-  ) +
-  scale_y_continuous(labels = percent) +
-  scale_fill_viridis_d(end = 0.9, direction = -1) +
-  xlab("Counties") +
-  ylab("Proportion of Switchers") +
-  labs(fill = "Designation") +
-  geom_hline(yintercept = switch_avg) +
-  annotate(
-    geom = "text", x = 50, y = 0.04, family = "CM Roman",
-    label = paste0(
-      "Average: ", formatC(switch_avg * 100, digits = 2, format = "f"), "%"
-    )
-  )
-p
-
+p <- county_stacked_plot(df_switched, y = "switcher", county = "county")
 pdf(here("fig", "switch_by_county.pdf"), width = 8.5, height = 4)
 print(
   pdf_default(p) +
