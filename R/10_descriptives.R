@@ -4,6 +4,15 @@ df_switched <- loadRData(here("data", "tidy", "switcher.Rda")) %>%
   filter(!is.na(age_groups))
 ## assert_that(!any(is.na(df)))
 
+county_covd <- loadRData(here("data", "tidy", "co_county_covid.Rda")) %>%
+  mutate(county = tolower(county)) %>%
+  ## First vote-by-mail date
+  filter(date == as.Date("2020-10-09")) %>%
+  select(county, cases_per_10k, deaths_per_10k)
+
+df <- left_join(df, county_covd %>% rename(county_full = county))
+df_switched <- left_join(df_switched, county_covd)
+
 # Percentages / conditional probabilities ======================================
 prop(df, "gen2020")
 prop(df_switched, "switcher")
@@ -33,6 +42,41 @@ pretty_condprob(df, A_var = "gen2020", "In person", B_var = "reg_bin", "EDR")
 ## Cond. on reg_bin == EDR, Pr(gen2020 == In person) is 92.9%
 pretty_condprob(df_switched, A_var = "switcher", "Yes", B_var = "reg_bin", "EDR")
 ## Cond. on reg_bin == EDR, Pr(switcher == Yes) is 89.1%
+
+pretty_condprob(df, A_var = "gen2020", "In person", B_var = "reg_bin", "15Days")
+## Cond. on reg_bin == 15Days, Pr(gen2020 == In person) is 48.1%
+pretty_condprob(df_switched, A_var = "switcher", "Yes", B_var = "reg_bin", "15Days")
+## Cond. on reg_bin == 15Days, Pr(switcher == Yes) is 39.8%
+
+pretty_condprob(df, A_var = "gen2020", "In person", B_var = "reg_bin", "30Days")
+## Cond. on reg_bin == 30Days, Pr(gen2020 == In person) is 10.4%
+pretty_condprob(df_switched, A_var = "switcher", "Yes", B_var = "reg_bin", "30Days")
+## Cond. on reg_bin == 30Days, Pr(switcher == Yes) is 6.3%
+
+pretty_condprob(df, A_var = "gen2020", "In person", B_var = "reg_bin", "30+")
+## Cond. on reg_bin == 30+, Pr(gen2020 == In person) is 4.3%
+pretty_condprob(df_switched, A_var = "switcher", "Yes", B_var = "reg_bin", "30+")
+## Cond. on reg_bin == 30+, Pr(switcher == Yes) is 3.3%
+
+pretty_condprob(df, A_var = "reg_bin", "EDR", B_var = "gen2020", "In person")
+## Cond. on gen2020 == In person, Pr(reg_bin == EDR) is 8.8%
+pretty_condprob(df_switched, A_var = "reg_bin", "EDR", B_var = "switcher", "Yes")
+## Cond. on gen2020 == In person, Pr(reg_bin == EDR) is 8.8%
+
+pretty_condprob(df, A_var = "reg_bin", "15Days", B_var = "gen2020", "In person")
+## Cond. on gen2020 == In person, Pr(reg_bin == 15Days) is 10.8%
+pretty_condprob(df_switched, A_var = "reg_bin", "15Days", B_var = "switcher", "Yes")
+## Cond. on switcher == Yes, Pr(reg_bin == 15Days) is 3.4%
+
+pretty_condprob(df, A_var = "reg_bin", "30Days", B_var = "gen2020", "In person")
+## 
+pretty_condprob(df_switched, A_var = "reg_bin", "30Days", B_var = "switcher", "Yes")
+## 
+
+pretty_condprob(df, A_var = "reg_bin", "30+", B_var = "gen2020", "In person")
+## 
+pretty_condprob(df_switched, A_var = "reg_bin", "30+", B_var = "switcher", "Yes")
+## 
 
 # Types of voting patterns =====================================================
 summ <- df %>%
@@ -85,17 +129,7 @@ print(
 
 # Summarize in-person voting by ================================================
 ## County ======================================================================
-inperson_by_county <- df %>%
-  group_by(county_full, gen2020) %>%
-  summarise(n = n(), county_designation = last(county_designation)) %>%
-  mutate(prop = n / sum(n, na.rm = TRUE)) %>%
-  filter(gen2020 == "In person") %>%
-  rowwise() %>%
-  mutate(
-    county = simple_cap(county_full),
-    county_designation = simple_cap(as.character(county_designation))
-  ) %>%
-  ungroup()
+inperson_by_county <- desc_county(df)
 summary(inperson_by_county$prop)
 
 inperson_avg <- as.numeric(prop(df, "gen2020", digit = 3)[[2]]) / 100
@@ -166,6 +200,8 @@ df %>%
 # 1 urban              In person 3246409 0.0541 0.000126
 # 2 rural              In person  379614 0.0504 0.000355
 # 3 frontier           In person   87000 0.0377 0.000646
+
+## COVID-19 prevalence =========================================================
 
 ## By party x age ==============================================================
 ## Will not include designation x party
@@ -259,17 +295,7 @@ dev.off()
 
 # Summarize switches by ========================================================
 ## County ======================================================================
-switch_by_county <- df_switched %>%
-  group_by(county, switcher) %>%
-  summarise(n = n(), county_designation = last(county_designation)) %>%
-  mutate(prop = n / sum(n, na.rm = TRUE)) %>%
-  filter(switcher == "Yes") %>%
-  rowwise() %>%
-  mutate(
-    county = simple_cap(county),
-    county_designation = simple_cap(as.character(county_designation))
-  ) %>%
-  ungroup()
+switch_by_county <- desc_county(df_switched, county = "county", y = "switcher")
 summary(switch_by_county$prop)
 
 switch_avg <- as.numeric(prop(df_switched, "switcher", digit = 3)[[2]]) / 100
@@ -340,6 +366,8 @@ df_switched %>%
 # 1 urban              Yes      2301411 0.0354 0.000122
 # 2 rural              Yes       273545 0.0343 0.000348
 # 3 frontier           Yes        63333 0.0251 0.000621
+
+## COVID-19 prevalence =========================================================
 
 ## By party x age ==============================================================
 ## Will not include designation x party
@@ -500,7 +528,7 @@ t_plot <- c(vote_2016 = 2016, vote_2020 = 2020) %>%
 
 ## Create ternary plot =========================================================
 p <- ternary_extra(
-  ggtern(t_plot, aes(x = not_voted, y = mail, z = in_person)) +
+  ggtern(t_plot, aes(x = mail, y = in_person, z = not_voted)) +
     geom_point(aes(color = winner, shape = year))
 )
 
@@ -512,7 +540,7 @@ dev.off()
 p <- ternary_extra(
   ggtern(
     t_plot %>% filter(winner_2016 == "Dem"),
-    aes(x = not_voted, y = mail, z = in_person)
+    aes(x = mail, y = in_person, z = not_voted)
   ) + geom_point(aes(color = winner, shape = year))
 )
 
@@ -523,7 +551,7 @@ dev.off()
 p <- ternary_extra(
   ggtern(
     t_plot %>% filter(winner_2016 == "Rep"),
-    aes(x = not_voted, y = mail, z = in_person)
+    aes(x = mail, y = in_person, z = not_voted)
   ) + geom_point(aes(color = winner, shape = year))
 )
 
