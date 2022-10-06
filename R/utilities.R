@@ -324,24 +324,27 @@ desc_county <- function(df, county, y, fill) {
     "In person",
     "Yes"
   )
-  df %>%
+  out <- df %>%
     group_by(!!as.name(county), !!as.name(y)) %>%
     summarise(n = n(), !!as.name(fill) := last(!!as.name(fill))) %>%
     mutate(prop = n / sum(n, na.rm = TRUE)) %>%
     filter(!!as.name(y) == v) %>%
     rowwise() %>%
-    mutate(
-      county = simple_cap(!!as.name(county)),
-      !!as.name(fill) := simple_cap(as.character(!!as.name(fill)))
-    ) %>%
-    ungroup()
+    mutate(county = simple_cap(!!as.name(county)))
+
+  if (!grepl("10k", fill)) {
+    out <- out %>%
+      mutate(!!as.name(fill) := simple_cap(as.character(!!as.name(fill))))
+  }
+
+  return(ungroup(out))
 }
 
-county_stacked_plot <- function(df, 
+county_stacked_plot <- function(df,
                                 y = "gen2020",
                                 fill = "county_designation",
                                 xint = 50,
-                                yint = 0.04,
+                                yint = 0.045,
                                 county = "county_full") {
   ylab <- ifelse(
     y == "gen2020",
@@ -349,13 +352,17 @@ county_stacked_plot <- function(df,
     "Proportion of Switchers"
   )
   labfill <- ifelse(
-    fill == "county_designation", 
+    fill == "county_designation",
     "Designation",
-    "COVID-19 Cases Per 10,000"
+    ifelse(
+      grepl("cases", fill),
+      "COVID-19 Cases Per 10,000",
+      "COVID-19 Deaths Per 10,000"
+    )
   )
-  
+
   df_summ <- desc_county(df = df, county = county, y = y, fill = fill)
-  
+
   avg_num <- as.numeric(prop(df, y, digit = 3)[[2]]) / 100
   p <- ggplot(df_summ, aes(x = fct_reorder(county, desc(prop)))) +
     geom_col(aes(y = prop, color = NULL, fill = !!as.name(fill))) +
@@ -370,6 +377,56 @@ county_stacked_plot <- function(df,
       label = paste0(
         "Average: ", formatC(avg_num * 100, digits = 2, format = "f"), "%"
       )
+    )
+  return(p)
+}
+
+party_stacked_plot <- function(df, 
+                               y = "gen2020",
+                               x = "age_groups") {
+  xlab <- ifelse(
+    x == "age_groups", 
+    "Age Groups",
+    "Registration Months for Post-2016 Registrants"
+  )
+  lvls <- ifelse(
+    y == "gen2020",
+    c("In person", "Mail", "Not voted"),
+    c("Yes", "No")
+  )
+  labls <- ifelse(
+    y == "gen2020",
+    c("In person", "Mail", "Not voted"),
+    c("Switched to In-person", "Not Switched")
+  )
+  p <- df %>%
+    group_by(party, !!as.name(x), !!as.name(y)) %>%
+    filter(!is.na(!!as.name(x))) %>%
+    summarise(n = n()) %>%
+    group_by(!!as.name(y)) %>%
+    mutate(sum = sum(n, na.rm = TRUE)) %>%
+    mutate(prop = n / sum) %>%
+    mutate(
+      party = case_when(
+        party == "dem" ~ "Dem.",
+        party == "rep" ~ "Rep.",
+        TRUE ~ "Others"
+      ),
+      !!as.name(y) := factor(!!as.name(y), levels = lvls, labels = labls)
+    ) %>%
+    ggplot() +
+    geom_bar(
+      stat = "identity",
+      aes(x = !!as.name(x), y = prop, fill = party)
+    ) +
+    xlab(xlab) +
+    ylab("") +
+    labs(fill = "Party") +
+    scale_y_continuous(labels = percent) +
+    facet_wrap(as.formula(paste("~", y))) +
+    scale_fill_manual(
+      values = c("Dem." = "#2166ac", "Rep." = "#b2182b", "Others" = "darkgray")
+      ## ['#b2182b','#ef8a62','#fddbc7','#f7f7f7','#d1e5f0','#67a9cf','#2166ac']
     )
   return(p)
 }

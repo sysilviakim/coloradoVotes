@@ -69,14 +69,14 @@ pretty_condprob(df_switched, A_var = "reg_bin", "15Days", B_var = "switcher", "Y
 ## Cond. on switcher == Yes, Pr(reg_bin == 15Days) is 3.4%
 
 pretty_condprob(df, A_var = "reg_bin", "30Days", B_var = "gen2020", "In person")
-## 
+## Cond. on gen2020 == In person, Pr(reg_bin == 30Days) is 2.4%
 pretty_condprob(df_switched, A_var = "reg_bin", "30Days", B_var = "switcher", "Yes")
-## 
+## Cond. on switcher == Yes, Pr(reg_bin == 30Days) is 0.8%
 
 pretty_condprob(df, A_var = "reg_bin", "30+", B_var = "gen2020", "In person")
-## 
+## Cond. on gen2020 == In person, Pr(reg_bin == 30+) is 77.9%
 pretty_condprob(df_switched, A_var = "reg_bin", "30+", B_var = "switcher", "Yes")
-## 
+## Cond. on switcher == Yes, Pr(reg_bin == 30+) is 93.9%
 
 # Types of voting patterns =====================================================
 summ <- df %>%
@@ -129,9 +129,10 @@ print(
 
 # Summarize in-person voting by ================================================
 ## County ======================================================================
+p <- county_stacked_plot(df)
 pdf(here("fig", "inperson_by_county.pdf"), width = 8.5, height = 4)
 print(
-  pdf_default(county_stacked_plot(df)) +
+  pdf_default(p) +
     theme(
       axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
       legend.position = c(0.9, 0.8)
@@ -180,39 +181,39 @@ df %>%
 # 3 frontier           In person   87000 0.0377 0.000646
 
 ## COVID-19 prevalence =========================================================
+p <- county_stacked_plot(df, fill = "cases_per_10k") +
+  scale_fill_viridis_c(end = 0.9, direction = -1)
+pdf(
+  here("fig", "inperson_by_county_covid_cases.pdf"),
+  width = 8.5, height = 4.1
+)
+print(
+  pdf_default(p) +
+    theme(
+      axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+      legend.position = c(0.8, 0.7425)
+    )
+)
+dev.off()
+
+p <- county_stacked_plot(df, fill = "deaths_per_10k") +
+  scale_fill_viridis_c(end = 0.9, direction = -1)
+pdf(
+  here("fig", "inperson_by_county_covid_deaths.pdf"),
+  width = 8.5, height = 4.1
+)
+print(
+  pdf_default(p) +
+    theme(
+      axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+      legend.position = c(0.8, 0.7425)
+    )
+)
+dev.off()
 
 ## By party x age ==============================================================
 ## Will not include designation x party
-p <- df %>%
-  group_by(party, age_groups, gen2020) %>%
-  filter(!is.na(age_groups)) %>%
-  summarise(n = n()) %>%
-  group_by(gen2020) %>%
-  mutate(sum = sum(n, na.rm = TRUE)) %>%
-  mutate(prop = n / sum) %>%
-  mutate(
-    party = case_when(
-      party == "dem" ~ "Dem.",
-      party == "rep" ~ "Rep.",
-      TRUE ~ "Others"
-    ),
-    gen2020 = factor(gen2020, levels = c("In person", "Mail", "Not voted"))
-  ) %>%
-  ggplot() +
-  geom_bar(
-    stat = "identity",
-    aes(x = age_groups, y = prop, fill = party)
-  ) +
-  xlab("Age Groups") +
-  ylab("") +
-  labs(fill = "Party") +
-  scale_y_continuous(labels = percent) +
-  facet_wrap(~gen2020) +
-  scale_fill_manual(
-    values = c("Dem." = "#2166ac", "Rep." = "#b2182b", "Others" = "darkgray")
-  )
-p
-
+p <- party_stacked_plot(df)
 pdf(here("fig", "inperson_by_age_party.pdf"), width = 6, height = 4)
 print(
   pdf_default(p) +
@@ -223,7 +224,7 @@ print(
 )
 dev.off()
 
-df %>% 
+df %>%
   group_by(gen2020) %>%
   summarise(mean_age = mean(age, na.rm = TRUE))
 
@@ -233,47 +234,17 @@ df[["reg_month"]] <- case_when(
   TRUE ~ as.Date(floor_date(df$registration_date, unit = "month"))
 )
 
-p <- df %>%
-  filter(!is.na(reg_month)) %>%
-  group_by(party, reg_month, gen2020) %>%
-  summarise(n = n()) %>%
-  group_by(gen2020) %>%
-  mutate(sum = sum(n, na.rm = TRUE)) %>%
-  mutate(prop = n / sum) %>%
-  mutate(
-    party = case_when(
-      party == "dem" ~ "Dem.",
-      party == "rep" ~ "Rep.",
-      TRUE ~ "Others"
-    ),
-    gen2020 = factor(gen2020, levels = c("In person", "Mail", "Not voted"))
-  ) %>%
-  ggplot() +
-  geom_bar(
-    stat = "identity", width = 20,
-    aes(x = reg_month, y = prop, fill = party)
-  ) +
-  xlab("Registration Months for Post-2016 Registrants") +
-  ylab("") +
-  labs(fill = "Party") +
-  scale_y_continuous(labels = percent) +
-  facet_wrap(~gen2020) +
-  scale_fill_manual(
-    values = c("Dem." = "#2166ac", "Rep." = "#b2182b", "Others" = "darkgray")
-  ) +
-  scale_x_date(
-    breaks = seq(as.Date("2017-01-01"), as.Date("2020-12-25"), by = "year"),
-    date_labels = "%Y"
-  )
-p
-
+p <- party_stacked_plot(df, x = "reg_month")
 pdf(here("fig", "inperson_by_reg_month_party.pdf"), width = 6, height = 4)
 print(pdf_default(p) + theme(legend.position = "bottom"))
 dev.off()
 
 # Summarize switches by ========================================================
 ## County ======================================================================
-p <- county_stacked_plot(df_switched, y = "switcher", county = "county")
+p <- county_stacked_plot(
+  df_switched,
+  y = "switcher", county = "county", yint = 0.03
+)
 pdf(here("fig", "switch_by_county.pdf"), width = 8.5, height = 4)
 print(
   pdf_default(p) +
@@ -325,48 +296,45 @@ df_switched %>%
 # 3 frontier           Yes        63333 0.0251 0.000621
 
 ## COVID-19 prevalence =========================================================
+p <- county_stacked_plot(
+  df_switched,
+  y = "switcher", county = "county", fill = "cases_per_10k", yint = 0.03
+) +
+  scale_fill_viridis_c(end = 0.9, direction = -1)
+pdf(
+  here("fig", "switch_by_county_covid_cases.pdf"),
+  width = 8.5, height = 4.1
+)
+print(
+  pdf_default(p) +
+    theme(
+      axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+      legend.position = c(0.8, 0.72)
+    )
+)
+dev.off()
+
+p <- county_stacked_plot(
+  df_switched,
+  y = "switcher", county = "county", fill = "deaths_per_10k", yint = 0.03
+) +
+  scale_fill_viridis_c(end = 0.9, direction = -1)
+pdf(
+  here("fig", "switch_by_county_covid_deaths.pdf"),
+  width = 8.5, height = 4.1
+)
+print(
+  pdf_default(p) +
+    theme(
+      axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+      legend.position = c(0.8, 0.7425)
+    )
+)
+dev.off()
 
 ## By party x age ==============================================================
 ## Will not include designation x party
-p <- df_switched %>%
-  group_by(party, age_groups, switcher) %>%
-  summarise(n = n()) %>%
-  ## group_by(age_groups, switcher) %>%
-  group_by(switcher) %>%
-  mutate(sum = sum(n, na.rm = TRUE)) %>%
-  mutate(prop = n / sum) %>%
-  mutate(
-    party = case_when(
-      party == "dem" ~ "Dem.",
-      party == "rep" ~ "Rep.",
-      TRUE ~ "Others"
-    ),
-    switcher = case_when(
-      switcher == "No" ~ "Not Switched",
-      TRUE ~ "Switched to In-person"
-    ),
-    switcher = factor(
-      switcher,
-      levels = c("Switched to In-person", "Not Switched")
-    )
-  ) %>%
-  ggplot() +
-  geom_bar(
-    ## position = "fill",
-    stat = "identity",
-    aes(x = age_groups, y = prop, fill = party)
-  ) +
-  xlab("Age Groups") +
-  ylab("") +
-  labs(fill = "Party") +
-  scale_y_continuous(labels = percent) +
-  facet_wrap(~switcher) +
-  scale_fill_manual(
-    values = c("Dem." = "#2166ac", "Rep." = "#b2182b", "Others" = "darkgray")
-    ## ['#b2182b','#ef8a62','#fddbc7','#f7f7f7','#d1e5f0','#67a9cf','#2166ac']
-  )
-p
-
+p <- party_stacked_plot(df_switched)
 pdf(here("fig", "switch_by_age_party.pdf"), width = 6, height = 4)
 print(
   pdf_default(p) +
@@ -377,7 +345,7 @@ print(
 )
 dev.off()
 
-df_switched %>% 
+df_switched %>%
   group_by(switcher) %>%
   summarise(mean_age = mean(age, na.rm = TRUE))
 
@@ -387,47 +355,7 @@ df_switched[["reg_month"]] <- case_when(
   TRUE ~ as.Date(floor_date(df_switched$registration_date, unit = "month"))
 )
 
-p <- df_switched %>%
-  filter(!is.na(reg_month)) %>%
-  group_by(party, reg_month, switcher) %>%
-  summarise(n = n()) %>%
-  group_by(switcher) %>%
-  mutate(sum = sum(n, na.rm = TRUE)) %>%
-  mutate(prop = n / sum) %>%
-  mutate(
-    party = case_when(
-      party == "dem" ~ "Dem.",
-      party == "rep" ~ "Rep.",
-      TRUE ~ "Others"
-    ),
-    switcher = case_when(
-      switcher == "No" ~ "Not Switched",
-      TRUE ~ "Switched to In-person"
-    ),
-    switcher = factor(
-      switcher,
-      levels = c("Switched to In-person", "Not Switched")
-    )
-  ) %>%
-  ggplot() +
-  geom_bar(
-    stat = "identity", width = 20,
-    aes(x = reg_month, y = prop, fill = party)
-  ) +
-  xlab("Registration Months for Post-2016 Registrants") +
-  ylab("") +
-  labs(fill = "Party") +
-  scale_y_continuous(labels = percent) +
-  facet_wrap(~switcher) +
-  scale_fill_manual(
-    values = c("Dem." = "#2166ac", "Rep." = "#b2182b", "Others" = "darkgray")
-  ) +
-  scale_x_date(
-    breaks = seq(as.Date("2017-01-01"), as.Date("2020-12-25"), by = "year"),
-    date_labels = "%Y"
-  )
-p
-
+p <- party_stacked_plot(df_switched, x = "reg_month")
 pdf(here("fig", "switch_by_reg_month_party.pdf"), width = 6, height = 4)
 print(pdf_default(p) + theme(legend.position = "bottom"))
 dev.off()
