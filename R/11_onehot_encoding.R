@@ -59,6 +59,11 @@ df %>%
 ## Not particularly bound by party but mostly those who have not voted
 ## Would lose half the nonvoters; thus use age brackets instead
 
+df_under20 <- df %>%
+  filter(age < 20) %>%
+  select(
+    -contains("age"), -contains("2018"), -contains("2016"), -contains("2014")
+  )
 df <- df %>% select(-age)
 assert_that(!any(is.na(df)))
 nrow(df) ## 3.7 mill conditional on turnout at least once during 2014--2020
@@ -79,27 +84,40 @@ county_pres <- loadRData(here("data", "tidy", "co_county_pres_wide.Rda")) %>%
   select(-dem_2016)
 
 assert_that(
-  all(sort(county_pres$county) == sort(unique(df$county_full)))
+  all(sort(county_pres$county) == sort(unique(df$county)))
 )
 assert_that(
-  all(sort(county_covd$county) == sort(unique(df$county_full)))
+  all(sort(county_covd$county) == sort(unique(df$county)))
 )
 
+df_under20 <- left_join(left_join(df_under20, county_covd), county_pres)
 df <- left_join(left_join(df, county_covd), county_pres)
 assert_that(!any(is.na(df)))
+assert_that(!any(is.na(df_under20)))
 
 x <- predict(caret::dummyVars(~., df %>% select(-gen2020), fullRank = TRUE), df)
 df_onehot <- as_tibble(x) %>% clean_names()
 df_onehot <- bind_cols(df %>% select(gen2020), df_onehot)
-
 save(df_onehot, file = here("data", "tidy", "gen2020_onehot.Rda"))
+
+x <- predict(
+  caret::dummyVars(~., df_under20 %>% select(-gen2020), fullRank = TRUE),
+  df_under20
+)
+df_onehot_under20 <- as_tibble(x) %>% clean_names()
+df_onehot_under20 <-
+  bind_cols(df_under20 %>% select(gen2020), df_onehot_under20)
+save(
+  df_onehot_under20,
+  file = here("data", "tidy", "gen2020_onehot_under20.Rda")
+)
 
 # Same one-hot procedure for switcher data =====================================
 orig <- loadRData(here("data", "tidy", "switcher.Rda"))
 prop(orig, "switcher")
 # switcher
-#   No  Yes 
-# 96.5  3.5 
+#   No  Yes
+# 96.5  3.5
 
 df <- orig %>%
   ungroup() %>%
@@ -109,7 +127,7 @@ df <- orig %>%
     c(contains("gen"), contains("pri")), age_groups
   ) %>%
   select(-contains("reg_")) %>%
-  filter(!is.na(congressional)) %>% ## 44 observations 
+  filter(!is.na(congressional)) %>% ## 44 observations
   mutate(gender = ifelse(is.na(gender), "missing", gender)) %>%
   mutate(
     age_groups = ifelse(is.na(age_groups), "missing", as.character(age_groups))
@@ -129,7 +147,6 @@ x <-
   predict(caret::dummyVars(~., df %>% select(-switcher), fullRank = TRUE), df)
 df_onehot_switcher <- as_tibble(x) %>% clean_names()
 df_onehot_switcher <- bind_cols(df %>% select(switcher), df_onehot_switcher)
-
 save(
   df_onehot_switcher,
   file = here("data", "tidy", "switcher_onehot.Rda")
