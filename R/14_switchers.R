@@ -3,7 +3,7 @@ df <- loadRData(here("data", "tidy", "switcher_onehot.Rda"))
 
 # Parameters ===================================================================
 ## dp = how much to downsample the majority class?
-dp <- seq(0.05, 0.5, by = 0.05)
+dp <- seq(0.05, 0.25, by = 0.05)
 metric <- "prAUC"
 alg <- c("gbm", "ranger")
 yvar <- "switcher"
@@ -89,9 +89,9 @@ print(
   include.rownames = FALSE, booktabs = TRUE, floating = FALSE
 )
 
-## gradient boosting with 20% downsampling best; load
+## gradient boosting with 15% downsampling best under current seq; load
 algx <- "gbm"
-dpx <- 0.35
+dpx <- 0.15
 load(here(
   "output",
   paste0(algx, "_caret_", metric, "_downsample_", dpx * 100, "_switch.Rda")
@@ -153,5 +153,3 @@ pdf(
 )
 print(pdf_default(autoplot(x)))
 dev.off()
-
-# 
