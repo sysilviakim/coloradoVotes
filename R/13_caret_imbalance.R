@@ -135,6 +135,7 @@ print(pdf_default(autoplot(x)))
 dev.off()
 
 ## https://yardstick.tidymodels.org/reference/pr_auc.html
+## debug(yardstick:::pr_auc_multiclass)
 x <- pr_curve(temp2, obs, In_person, Mail, Not_voted)
 x <- x %>% mutate(.level = gsub("_", " ", .level))
 pdf(
