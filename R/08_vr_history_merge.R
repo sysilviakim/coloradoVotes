@@ -8,6 +8,9 @@ if (nrows == 100) {
   load(here("data", "tidy", "voter_history_wide_full.RData"))
 }
 
+## 6.0% of "voters" voted in person
+prop.table(table(voter_history_wide %>% filter(gen2020 != 0) %>% .$gen2020))
+
 # Check voters not in master VR ================================================
 temp <- anti_join(voter_history_wide, df_cleaned, by = "voter_id")
 nrow(temp)
