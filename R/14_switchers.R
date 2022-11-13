@@ -89,6 +89,17 @@ print(
   include.rownames = FALSE, booktabs = TRUE, floating = FALSE
 )
 
+print(
+  xtable(
+    temp %>% 
+      rename(Algorithm = algorithm) %>% 
+      select(-contains("Value"), -contains("Balanced"), -Recall),
+    digits = 3
+  ),
+  file = here("tab", "perf_summ_switcher_appendix.tex"),
+  include.rownames = FALSE, booktabs = TRUE, floating = FALSE
+)
+
 ## gradient boosting with 15% downsampling best under current seq; load
 algx <- "gbm"
 dpx <- 0.15
