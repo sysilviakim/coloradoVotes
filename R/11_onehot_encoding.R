@@ -1,8 +1,10 @@
 source(here::here("R", "utilities.R"))
 library(caret)
+load(here("data", "tidy", "voter_res_to_box_distance.Rda"))
 
 # Load and setup for filling NA values =========================================
-orig <- loadRData(here("data", "tidy", "multiclass_county_collapsed.Rda"))
+orig <- loadRData(here("data", "tidy", "multiclass_county_collapsed.Rda")) %>%
+  left_join(., distance_to_box)
 prop(orig, "gen2020")
 # gen2020
 #    Mail In person Not voted
@@ -13,7 +15,7 @@ df <- orig %>%
   select(
     gen2020, party, age, congressional, permanent_mail_in_voter, county,
     status, county_full, registration_date, ## in_person_vote_date
-    c(contains("gen"), contains("pri")), age_groups
+    c(contains("gen"), contains("pri")), age_groups, distance
   ) %>%
   select(-contains("reg_")) %>%
   filter(!is.na(congressional)) %>% ## 386 observations
@@ -36,6 +38,7 @@ df %>%
 # party
 #   dem  oth  rep
 #  29.3 40.9 29.7
+
 df %>%
   filter(!is.na(age)) %>%
   prop(., "party")
@@ -49,6 +52,7 @@ df %>%
 # gen2020
 #    Mail In person Not voted
 #     0.1       0.0      99.9
+
 df %>%
   filter(!is.na(age)) %>%
   prop(., "gen2020")
@@ -65,15 +69,38 @@ df_under20 <- df %>%
     -contains("age"), -contains("2018"), -contains("2016"), -contains("2014")
   )
 df <- df %>% select(-age)
-assert_that(!any(is.na(df)))
+## assert_that(!any(is.na(df))) ---> no longer true do to 5% of distance calc
 nrow(df) ## 3.7 mill conditional on turnout at least once during 2014--2020
 
 # Add county-level variables ===================================================
 county_covd <- loadRData(here("data", "tidy", "co_county_covid.Rda")) %>%
-  mutate(county = tolower(county)) %>%
+  mutate(county = tolower(county))
+
+snapshot <- county_covd %>%
   ## First vote-by-mail date
   filter(date == as.Date("2020-10-09")) %>%
   select(county, cases_per_10k, deaths_per_10k)
+
+## Let's try a difference between Sep and Oct in 2020
+## But Kiowa county data only available from 2020-09-24 ... so let's use that
+delta <- county_covd %>%
+  filter(date %in% as.Date(c("2020-09-24", "2020-10-09"))) %>%
+  group_by(county) %>%
+  summarise(
+    ## the percentage increase between the two dates
+    ## if start value is 0 and end value is 0, then the percentage is 0
+    ## if the start value is 0 and the end value is not 0 ...
+    cases_delta = case_when(
+      sum(cases_per_10k) == 0 ~ 0,
+      cases_per_10k[1] == 0 & cases_per_10k[2] > 0 ~ 1,
+      TRUE ~ (cases_per_10k[2] - cases_per_10k[1]) / cases_per_10k[1]
+    ),
+    deaths_delta = case_when(
+      sum(deaths_per_10k) == 0 ~ 0,
+      deaths_per_10k[1] == 0 & deaths_per_10k[2] > 0 ~ 1,
+      TRUE ~ (deaths_per_10k[2] - deaths_per_10k[1]) / deaths_per_10k[1]
+    )
+  )
 
 county_pres <- loadRData(here("data", "tidy", "co_county_pres_wide.Rda")) %>%
   filter(year == 2016) %>%
@@ -87,13 +114,15 @@ assert_that(
   all(sort(county_pres$county) == sort(unique(df$county)))
 )
 assert_that(
-  all(sort(county_covd$county) == sort(unique(df$county)))
+  all(sort(unique(county_covd$county)) == sort(unique(df$county)))
 )
 
-df_under20 <- left_join(left_join(df_under20, county_covd), county_pres)
-df <- left_join(left_join(df, county_covd), county_pres)
-assert_that(!any(is.na(df)))
-assert_that(!any(is.na(df_under20)))
+df_under20 <- left_join(
+  left_join(df_under20, left_join(snapshot, delta)), county_pres
+)
+df <- left_join(left_join(df, left_join(snapshot, delta)), county_pres)
+## assert_that(!any(is.na(df)))
+## assert_that(!any(is.na(df_under20)))
 
 x <- predict(caret::dummyVars(~., df %>% select(-gen2020), fullRank = TRUE), df)
 df_onehot <- as_tibble(x) %>% clean_names()
@@ -113,7 +142,8 @@ save(
 )
 
 # Same one-hot procedure for switcher data =====================================
-orig <- loadRData(here("data", "tidy", "switcher.Rda"))
+orig <- loadRData(here("data", "tidy", "switcher.Rda")) %>%
+  left_join(., distance_to_box)
 prop(orig, "switcher")
 # switcher
 #   No  Yes
@@ -124,7 +154,7 @@ df <- orig %>%
   select(
     switcher, party, age, congressional, permanent_mail_in_voter, county,
     status, registration_date, ## in_person_vote_date
-    c(contains("gen"), contains("pri")), age_groups
+    c(contains("gen"), contains("pri")), age_groups, distance
   ) %>%
   select(-contains("reg_")) %>%
   filter(!is.na(congressional)) %>% ## 44 observations
@@ -140,8 +170,8 @@ df <- orig %>%
   select(-age) %>%
   select(-gen2020)
 
-df <- left_join(left_join(df, county_covd), county_pres)
-assert_that(!any(is.na(df)))
+df <- left_join(left_join(df, left_join(snapshot, delta)), county_pres)
+## assert_that(!any(is.na(df)))
 
 x <-
   predict(caret::dummyVars(~., df %>% select(-switcher), fullRank = TRUE), df)

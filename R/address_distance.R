@@ -221,7 +221,7 @@ for (i in seq(nrow(df))) {
 assert_that(all(!is.na(df$distance)))
 
 ## Actually, rename it to `distance_to_box`
-distance_to_box <- df
+distance_to_box <- dedup(df)
 save(
   distance_to_box,
   file = here("data", "tidy", "voter_res_to_box_distance.Rda")
