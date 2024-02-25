@@ -1,5 +1,8 @@
 source(here::here("R", "utilities.R"))
-df <- loadRData(here("data", "tidy", "switcher_onehot.Rda"))
+df <- loadRData(here("data", "tidy", "switcher_onehot.Rda")) %>%
+  ## edit: delete the differentiation of mail vs. in-person
+  ## leave only whether the voter did not vote in that election
+  select(-contains("_in_person"))
 
 # Parameters ===================================================================
 ## dp = how much to downsample the majority class?
@@ -100,9 +103,9 @@ print(
   include.rownames = FALSE, booktabs = TRUE, floating = FALSE
 )
 
-## gradient boosting with 15% downsampling best under current seq; load
+## gradient boosting with 25% downsampling best under current seq; load
 algx <- "gbm"
-dpx <- 0.15
+dpx <- 0.25
 load(here(
   "output",
   paste0(algx, "_caret_", metric, "_downsample_", dpx * 100, "_switch.Rda")

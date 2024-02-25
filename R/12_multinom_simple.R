@@ -71,7 +71,7 @@ stargazer(
   no.space = TRUE, notes = "County fixed controls omitted."
 )
 
-# Binary logit for switcher ====================================================
+# Binary LPM for switcher ======================================================
 fname <- here("output", "lm_switcher.Rda")
 if (!file.exists(fname)) {
   lm_switcher <- lm(
@@ -79,18 +79,22 @@ if (!file.exists(fname)) {
     data = df_onehot_switcher %>%
       mutate(switcher = as.numeric(switcher) - 1) %>%
       ## will be dropped
-      select(-contains("per_10k"), -contains("_2016"))
+      select(-contains("per_10k"), -contains("_2016")) %>%
+      ## edit: delete the differentiation of mail vs. in-person
+      ## leave only whether the voter did not vote in that election
+      select(-contains("_in_person"))
   )
   save(lm_switcher, file = fname)
 } else {
   load(fname)
 }
 
-## Predicts 0.00004% of voters will switch to in person
+## Prediction
 pred <- predict(lm_switcher)
-formatC(prop.table(table(pred)) * 100, format = "f", digits = 5) %>%
-  .[[2]] %>%
-  write(here("tab", "lm_switcher_prediction_perc.tex"))
+summary(pred)
+# formatC(prop.table(table(pred)) * 100, format = "f", digits = 5) %>%
+#   .[[2]] %>%
+#   write(here("tab", "lm_switcher_prediction_perc.tex"))
 
 ## Export summary
 # se_switcher <- coeftest(
