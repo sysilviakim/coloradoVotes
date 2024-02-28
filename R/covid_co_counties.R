@@ -59,7 +59,37 @@ co_covid <- co_covid %>%
     deaths_per_100k = deaths / (population / 1e5),
     cases_per_10k = cases / (population / 1e4),
     deaths_per_10k = deaths / (population / 1e4)
+  ) %>%
+  mutate(county = tolower(county))
+
+## Let's try a difference between Sep and Oct in 2020
+## But Kiowa county data only available from 2020-09-24 ... so let's use that
+## as.Date("2020-10-09") - as.Date("2020-09-24") ---> 15 days (half month)
+delta <- co_covid %>%
+  filter(date %in% as.Date(c("2020-09-24", "2020-10-09"))) %>%
+  group_by(county) %>%
+  summarise(
+    ## the percentage increase between the two dates
+    ## if start value is 0 and end value is 0, then the percentage is 0
+    ## if the start value is 0 and the end value is not 0 ...
+    cases_delta = case_when(
+      sum(cases_per_10k) == 0 ~ 0,
+      cases_per_10k[1] == 0 & cases_per_10k[2] > 0 ~ 1,
+      TRUE ~ (cases_per_10k[2] - cases_per_10k[1]) / cases_per_10k[1]
+    ),
+    deaths_delta = case_when(
+      sum(deaths_per_10k) == 0 ~ 0,
+      deaths_per_10k[1] == 0 & deaths_per_10k[2] > 0 ~ 1,
+      TRUE ~ (deaths_per_10k[2] - deaths_per_10k[1]) / deaths_per_10k[1]
+    )
   )
+
+county_covd <- co_covid %>%
+  ## First vote-by-mail date
+  filter(date == as.Date("2020-10-09")) %>%
+  select(county, cases_per_10k, deaths_per_10k) %>%
+  left_join(., delta)
 
 # Saving =======================================================================
 save(co_covid, file = here("data", "tidy", "co_county_covid.Rda"))
+save(county_covd, file = here("data", "tidy", "co_county_covid_summary.Rda"))

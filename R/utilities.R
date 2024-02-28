@@ -261,7 +261,8 @@ varimp_labels <- c(
   "age_groups_gen_x_41_56", "age_groups_gen_z_18_24",
   "age_groups_milennial_25_40", "age_groups_missing", "age_groups_silent_75",
   "county_designation_rural", "county_designation_frontier", "cases_per_10k",
-  "deaths_per_10k", "dem_2016", "rep_2016", "oth_2016", "winner_2016rep"
+  "deaths_per_10k", "dem_2016", "rep_2016", "oth_2016", "winner_2016rep",
+  "distance", "cases_delta", "deaths_delta"
 ) %>%
   enframe() %>%
   select(-name) %>%
@@ -284,6 +285,9 @@ varimp_labels <- c(
       name == "rep_2016" ~ "County-level Rep. Presidential Vote Share in 2016",
       name == "oth_2016" ~ "County-level Oth. Presidential Vote Share in 2016",
       name == "winner_2016rep" ~ "County-level Presidential Winner",
+      name == "distance" ~ "Distance from Nearest Vote Center",
+      name == "deaths_delta" ~ "County-level Deaths, Percent Increase in Two Weeks",
+      name == "cases_delta" ~ "County-level Cases, Percent Increase in Two Weeks",
       TRUE ~ name
     ),
     label = gsub("_", " ", label),
