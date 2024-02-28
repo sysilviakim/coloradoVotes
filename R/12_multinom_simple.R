@@ -9,6 +9,14 @@ library(estimatr)
 load(here("data", "tidy", "gen2020_onehot.Rda"))
 load(here("data", "tidy", "switcher_onehot.Rda"))
 
+## Unit conversion!!! Meter to mile
+df_onehot <- df_onehot %>%
+  mutate(distance = distance / 1609.344) %>%
+  filter(!is.na(distance))
+df_onehot_switcher <- df_onehot_switcher %>%
+  mutate(distance = distance / 1609.344) %>%
+  filter(!is.na(distance))
+
 # Discrepancy betwen official tally ============================================
 ## Using `2020GEPrecinctLevelTurnoutPosted.xlsx`
 ## total ballots = 3,291,661 as opposed to VF data = 3,280,335
@@ -33,7 +41,7 @@ if (!file.exists(fname)) {
   load(fname)
 }
 
-## Coefficients, prediction, visreg
+## Coefficients, prediction
 summ <- summary(mnl)
 z <- summ$coefficients / summ$standard.errors
 p <- (1 - pnorm(abs(z), 0, 1)) * 2
@@ -41,7 +49,6 @@ p
 exp(coef(mnl))
 
 ## Terrible prediction due to class imbalance (not out-sample)
-## Predicts 0.15488% of voters will vote in person
 pred <- predict(mnl)
 formatC(prop.table(table(pred)) * 100, format = "f", digits = 5) %>%
   .[[2]] %>%
@@ -78,8 +85,8 @@ if (!file.exists(fname)) {
     switcher ~ .,
     data = df_onehot_switcher %>%
       mutate(switcher = as.numeric(switcher) - 1) %>%
-      ## will be dropped
-      select(-contains("per_10k"), -contains("_2016")) %>%
+      ## let's keep not county indicators but county-level cont. variables
+      select(-contains("county")) %>%
       ## edit: delete the differentiation of mail vs. in-person
       ## leave only whether the voter did not vote in that election
       select(-contains("_in_person"))
@@ -90,20 +97,22 @@ if (!file.exists(fname)) {
 }
 
 ## Prediction
-pred <- predict(lm_switcher)
-summary(pred)
+pred <- case_when(
+  predict(lm_switcher) > 0.5 ~ "switcher",
+  TRUE ~ "non-switcher"
+)
+table(pred) ## everyone is a non-switcher
+table(df_onehot_switcher$switcher)
 # formatC(prop.table(table(pred)) * 100, format = "f", digits = 5) %>%
 #   .[[2]] %>%
 #   write(here("tab", "lm_switcher_prediction_perc.tex"))
 
 ## Export summary
-# se_switcher <- coeftest(
-#   lm_switcher,
-#   vcov = vcovHC(lm_switcher, type = "HC0")
-# )[, "Std. Error"]
+cov1 <- vcovHC(lm_switcher, type = "HC1")
+robust_se <- sqrt(diag(cov1))
 stargazer(
   lm_switcher,
-  ## se = se_switcher,
+  se = list(NULL, robust_se),
   covariate.labels = varimp_labels %>%
     filter(name %in% names(coef(lm_switcher))) %>%
     filter(!grepl("county", name)) %>%

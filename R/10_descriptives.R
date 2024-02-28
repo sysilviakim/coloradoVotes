@@ -3,12 +3,12 @@ df <- loadRData(here("data", "tidy", "multiclass_county_collapsed.Rda"))
 df_switched <- loadRData(here("data", "tidy", "switcher.Rda")) %>%
   filter(!is.na(age_groups))
 ## assert_that(!any(is.na(df)))
-
-county_covd <- loadRData(here("data", "tidy", "co_county_covid.Rda")) %>%
-  mutate(county = tolower(county)) %>%
-  ## First vote-by-mail date
-  filter(date == as.Date("2020-10-09")) %>%
-  select(county, cases_per_10k, deaths_per_10k)
+load(here("data", "tidy", "co_county_covid_summary.Rda"))
+county_covd <- county_covd %>%
+  mutate(
+    deaths_delta = deaths_delta * 100,
+    cases_delta = cases_delta * 100
+  )
 
 df <- left_join(df, county_covd %>% rename(county_full = county))
 df_switched <- left_join(df_switched, county_covd)
@@ -181,8 +181,7 @@ df %>%
 # 3 frontier           In person   87000 0.0377 0.000646
 
 ## COVID-19 prevalence =========================================================
-p <- county_stacked_plot(df, fill = "cases_per_10k") +
-  scale_fill_viridis_c(end = 0.9, direction = -1)
+p <- county_stacked_plot(df, fill = "cases_per_10k", continuous = TRUE)
 pdf(
   here("fig", "inperson_by_county_covid_cases.pdf"),
   width = 8.5, height = 4.1
@@ -196,10 +195,38 @@ print(
 )
 dev.off()
 
-p <- county_stacked_plot(df, fill = "deaths_per_10k") +
-  scale_fill_viridis_c(end = 0.9, direction = -1)
+p <- county_stacked_plot(df, fill = "deaths_per_10k", continuous = TRUE)
 pdf(
   here("fig", "inperson_by_county_covid_deaths.pdf"),
+  width = 8.5, height = 4.1
+)
+print(
+  pdf_default(p) +
+    theme(
+      axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+      legend.position = c(0.8, 0.7425)
+    )
+)
+dev.off()
+
+## COVID-19 increase ===========================================================
+p <- county_stacked_plot(df, fill = "cases_delta", continuous = TRUE)
+pdf(
+  here("fig", "inperson_by_county_cases_increase.pdf"),
+  width = 8.5, height = 4.1
+)
+print(
+  pdf_default(p) +
+    theme(
+      axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+      legend.position = c(0.8, 0.7425)
+    )
+)
+dev.off()
+
+p <- county_stacked_plot(df, fill = "deaths_delta", continuous = TRUE)
+pdf(
+  here("fig", "inperson_by_county_death_increase.pdf"),
   width = 8.5, height = 4.1
 )
 print(
@@ -297,14 +324,10 @@ df_switched %>%
 
 ## COVID-19 prevalence =========================================================
 p <- county_stacked_plot(
-  df_switched,
+  df_switched, continuous = TRUE,
   y = "switcher", county = "county", fill = "cases_per_10k", yint = 0.03
-) +
-  scale_fill_viridis_c(end = 0.9, direction = -1)
-pdf(
-  here("fig", "switch_by_county_covid_cases.pdf"),
-  width = 8.5, height = 4.1
 )
+pdf(here("fig", "switch_by_county_covid_cases.pdf"), width = 8.5, height = 4.1)
 print(
   pdf_default(p) +
     theme(
@@ -315,12 +338,43 @@ print(
 dev.off()
 
 p <- county_stacked_plot(
-  df_switched,
+  df_switched, continuous = TRUE,
   y = "switcher", county = "county", fill = "deaths_per_10k", yint = 0.03
-) +
-  scale_fill_viridis_c(end = 0.9, direction = -1)
+)
+pdf(here("fig", "switch_by_county_covid_deaths.pdf"), width = 8.5, height = 4.1)
+print(
+  pdf_default(p) +
+    theme(
+      axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+      legend.position = c(0.8, 0.7425)
+    )
+)
+dev.off()
+
+## COVID-19 increase ===========================================================
+p <- county_stacked_plot(
+  df_switched, fill = "cases_delta", continuous = TRUE,
+  county = "county", yint = 0.03
+)
 pdf(
-  here("fig", "switch_by_county_covid_deaths.pdf"),
+  here("fig", "switch_by_county_cases_increase.pdf"),
+  width = 8.5, height = 4.1
+)
+print(
+  pdf_default(p) +
+    theme(
+      axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+      legend.position = c(0.8, 0.7425)
+    )
+)
+dev.off()
+
+p <- county_stacked_plot(
+  df_switched, fill = "deaths_delta", continuous = TRUE,
+  county = "county", yint = 0.03
+)
+pdf(
+  here("fig", "switch_by_county_death_increase.pdf"),
   width = 8.5, height = 4.1
 )
 print(

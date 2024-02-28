@@ -55,3 +55,8 @@ data/raw/*.csv
 data/tidy/*.RData
 data/tidy/*.Rda
 data/tidy/*.fst
+
+# Mac files
+.DS_Store
+._*
+

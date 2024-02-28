@@ -2,7 +2,9 @@ source(here::here("R", "utilities.R"))
 df <- loadRData(here("data", "tidy", "switcher_onehot.Rda")) %>%
   ## edit: delete the differentiation of mail vs. in-person
   ## leave only whether the voter did not vote in that election
-  select(-contains("_in_person"))
+  select(-contains("_in_person")) %>%
+  filter(!is.na(distance))
+assert_that(!any(is.na(df)))
 
 # Parameters ===================================================================
 ## dp = how much to downsample the majority class?
@@ -16,6 +18,13 @@ perf_list <- vector("list", length = length(alg))
 names(perf_list) <- alg
 perf_list <- perf_list %>%
   imap(~ set_names(vector("list", length = length(dp)), nm = dp))
+
+set.seed(123)
+library(parallel)
+no_cores <- floor(detectCores() / 2)
+library(doParallel)
+cl <- makeCluster(no_cores)
+registerDoParallel(cl)
 
 for (dpx in dp) {
   t1 <- multiclass_train_prep(df, y = "switcher")
@@ -63,6 +72,9 @@ for (algx in alg) {
     message(paste0("Task finished: ", algx, ", ", dpx, "."))
   }
 }
+
+stopCluster(cl)
+registerDoSEQ()
 
 # Performance assessment =======================================================
 load(here("output", "perf_list_switcher.Rda"))

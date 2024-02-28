@@ -73,35 +73,7 @@ df <- df %>% select(-age)
 nrow(df) ## 3.7 mill conditional on turnout at least once during 2014--2020
 
 # Add county-level variables ===================================================
-county_covd <- loadRData(here("data", "tidy", "co_county_covid.Rda")) %>%
-  mutate(county = tolower(county))
-
-snapshot <- county_covd %>%
-  ## First vote-by-mail date
-  filter(date == as.Date("2020-10-09")) %>%
-  select(county, cases_per_10k, deaths_per_10k)
-
-## Let's try a difference between Sep and Oct in 2020
-## But Kiowa county data only available from 2020-09-24 ... so let's use that
-delta <- county_covd %>%
-  filter(date %in% as.Date(c("2020-09-24", "2020-10-09"))) %>%
-  group_by(county) %>%
-  summarise(
-    ## the percentage increase between the two dates
-    ## if start value is 0 and end value is 0, then the percentage is 0
-    ## if the start value is 0 and the end value is not 0 ...
-    cases_delta = case_when(
-      sum(cases_per_10k) == 0 ~ 0,
-      cases_per_10k[1] == 0 & cases_per_10k[2] > 0 ~ 1,
-      TRUE ~ (cases_per_10k[2] - cases_per_10k[1]) / cases_per_10k[1]
-    ),
-    deaths_delta = case_when(
-      sum(deaths_per_10k) == 0 ~ 0,
-      deaths_per_10k[1] == 0 & deaths_per_10k[2] > 0 ~ 1,
-      TRUE ~ (deaths_per_10k[2] - deaths_per_10k[1]) / deaths_per_10k[1]
-    )
-  )
-
+load(here("data", "tidy", "co_county_covid_summary.Rda"))
 county_pres <- loadRData(here("data", "tidy", "co_county_pres_wide.Rda")) %>%
   filter(year == 2016) %>%
   ungroup() %>%
@@ -110,17 +82,11 @@ county_pres <- loadRData(here("data", "tidy", "co_county_pres_wide.Rda")) %>%
   mutate(winner_2016 = ifelse(dem_2016 > rep_2016, "dem", "rep")) %>%
   select(-dem_2016)
 
-assert_that(
-  all(sort(county_pres$county) == sort(unique(df$county)))
-)
-assert_that(
-  all(sort(unique(county_covd$county)) == sort(unique(df$county)))
-)
+assert_that(all(sort(county_pres$county) == sort(unique(df$county))))
+assert_that(all(sort(unique(county_covd$county)) == sort(unique(df$county))))
 
-df_under20 <- left_join(
-  left_join(df_under20, left_join(snapshot, delta)), county_pres
-)
-df <- left_join(left_join(df, left_join(snapshot, delta)), county_pres)
+df_under20 <- left_join(left_join(df_under20, county_covd), county_pres)
+df <- left_join(left_join(df, county_covd), county_pres)
 ## assert_that(!any(is.na(df)))
 ## assert_that(!any(is.na(df_under20)))
 
@@ -170,7 +136,7 @@ df <- orig %>%
   select(-age) %>%
   select(-gen2020)
 
-df <- left_join(left_join(df, left_join(snapshot, delta)), county_pres)
+df <- left_join(left_join(df, county_covd), county_pres)
 ## assert_that(!any(is.na(df)))
 
 x <-

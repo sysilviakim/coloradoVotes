@@ -349,7 +349,8 @@ county_stacked_plot <- function(df,
                                 fill = "county_designation",
                                 xint = 50,
                                 yint = 0.045,
-                                county = "county_full") {
+                                county = "county_full", 
+                                continuous = FALSE) {
   ylab <- ifelse(
     y == "gen2020",
     "Proportion of In-person Votes",
@@ -368,13 +369,21 @@ county_stacked_plot <- function(df,
   df_summ <- desc_county(df = df, county = county, y = y, fill = fill)
 
   avg_num <- as.numeric(prop(df, y, digit = 3)[[2]]) / 100
-  p <- ggplot(df_summ, aes(x = fct_reorder(county, desc(prop)))) +
-    geom_col(aes(y = prop, color = NULL, fill = !!as.name(fill))) +
+  
+  if (continuous) {
+    df_summ[[fill]] <- as.numeric(df_summ[[fill]])
+    p <- ggplot(df_summ, aes(x = fct_reorder(county, desc(prop)))) +
+      geom_col(aes(y = prop, color = NULL, fill = !!as.name(fill))) +
+      scale_fill_viridis_c(end = 0.9, direction = -1)
+  } else {
+    p <- ggplot(df_summ, aes(x = fct_reorder(county, desc(prop)))) +
+      geom_col(aes(y = prop, color = NULL, fill = !!as.name(fill))) +
+      scale_fill_viridis_d(end = 0.9, direction = -1)
+  }
+  p <- p +
     scale_y_continuous(labels = percent) +
-    scale_fill_viridis_d(end = 0.9, direction = -1) +
     xlab("Counties") +
-    ylab(ylab) +
-    labs(fill = labfill) +
+    ylab(ylab) + 
     geom_hline(yintercept = avg_num) +
     annotate(
       geom = "text", x = xint, y = yint, family = "CM Roman",
@@ -382,6 +391,17 @@ county_stacked_plot <- function(df,
         "Average: ", formatC(avg_num * 100, digits = 2, format = "f"), "%"
       )
     )
+  
+  if (grepl("delta", fill)) {
+    labfill <- ifelse(
+      grepl("cases", fill),
+      "COVID-19 Cases % Increase", ## , Sep 24 to Oct 9, 2020",
+      "COVID-19 Deaths % Increase" ## , Sep 24 to Oct 9, 2020"
+    )
+  }
+  
+  p <- p +
+    labs(fill = labfill)
   return(p)
 }
 
