@@ -163,30 +163,6 @@ print(
 )
 dev.off()
 
-p1 <- ggplot(p$data, aes(prop)) +
-  geom_density() +
-  scale_x_continuous(labels = percent) +
-  xlab("Proportion of In-person Votes") +
-  ylab("Density")
-
-pdf(here("fig", "inperson_by_county_density.pdf"), width = 4, height = 2.5)
-print(pdf_default(p1))
-dev.off()
-
-p2 <- ggplot(p$data, aes(sample = prop)) +
-  stat_qq() +
-  stat_qq_line() +
-  xlab("Theoretical Quantiles") +
-  ylab("In-person Vote Proportion's Quantiles")
-
-pdf(here("fig", "inperson_by_county_qq.pdf"), width = 4, height = 2.5)
-print(pdf_default(p2))
-dev.off()
-
-library(nortest)
-ad.test(p$data$prop)
-cvm.test(p$data$prop)
-
 ## County designation ==========================================================
 df %>%
   group_by(county_designation, gen2020) %>%
@@ -304,30 +280,6 @@ print(
     )
 )
 dev.off()
-
-p1 <- ggplot(p$data, aes(prop)) +
-  geom_density() +
-  scale_x_continuous(labels = percent) +
-  xlab("Proportion of Switchers") +
-  ylab("Density")
-
-pdf(here("fig", "switch_by_county_density.pdf"), width = 4, height = 2.5)
-print(pdf_default(p1))
-dev.off()
-
-p2 <- ggplot(p$data, aes(sample = prop)) +
-  stat_qq() +
-  stat_qq_line() +
-  xlab("Theoretical Quantiles") +
-  ylab("Switcher Proportion's Quantiles")
-
-pdf(here("fig", "switch_by_county_qq.pdf"), width = 4, height = 2.5)
-print(pdf_default(p2))
-dev.off()
-
-library(nortest)
-ad.test(p$data$prop)
-cvm.test(p$data$prop)
 
 ## County designation ==========================================================
 df_switched %>%
