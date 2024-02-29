@@ -133,5 +133,5 @@ stargazer(
   dep.var.caption = "Switching to In-person Voting",
   out = here("tab", "lm_switcher.tex"), float = FALSE,
   omit.stat = c("f", "ser"), star.cutoffs = c(0.05, 0.01, 0.001),
-  no.space = TRUE, notes = "County fixed controls omitted."
+  no.space = TRUE ## , notes = "County fixed controls omitted."
 )

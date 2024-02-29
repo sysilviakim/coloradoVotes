@@ -148,6 +148,29 @@ pdf_varimp(
   width = 5, height = 3
 )
 
+## Version 2: reviewer request
+lab <- varImp(model_down)$importance %>%
+  arrange(desc(Overall)) %>%
+  head(20) %>%
+  rownames()
+
+pdf_varimp(
+  model_down,
+  filename = here(
+    "fig",
+    paste0(algx, "_caret_", metric, "_downsample_", dpx * 100, "_varimp_v2.pdf")
+  ),
+  font = "CM Roman",
+  labels = varimp_labels %>%
+    filter(name %in% lab) %>%
+    mutate(name = factor(name, levels = lab)) %>%
+    arrange(desc(name)) %>%
+    .$label %>%
+    ## Manual adjustment
+    str_pad(width = 57, pad = " "),
+  width = 7, height = 3, n_max = 20
+)
+
 ## yardstick figures
 x <- roc_curve(temp2, obs, In_person, Mail, Not_voted)
 x <- x %>% mutate(.level = gsub("_", " ", .level))

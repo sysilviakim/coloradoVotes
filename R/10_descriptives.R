@@ -28,6 +28,29 @@ print(
   booktabs = TRUE, floating = FALSE
 )
 
+temp <- df_switched %>% 
+  group_by(county) %>%
+  summarise(switcher = mean(as.numeric(switcher) - 1, na.rm = TRUE)) %>%
+  arrange(desc(switcher)) %>%
+  left_join(., county_covd)
+
+cor.test(temp$switcher, temp$cases_delta) ## p-value = 0.6941
+cor.test(temp$switcher, temp$deaths_delta) ## p-value = 0.9104
+
+temp <- df %>%
+  group_by(county) %>%
+  mutate(
+    in_person = case_when(
+      gen2020 == "In person" ~ 1,
+      TRUE ~ 0
+    )
+  ) %>%
+  summarise(in_person = mean(in_person, na.rm = TRUE)) %>%
+  left_join(., county_covd)
+
+cor.test(temp$in_person, temp$cases_delta) ## p-value = 0.3689
+cor.test(temp$in_person, temp$deaths_delta) ## p-value = 0.1189
+
 pretty_condprob(df, A_var = "gen2020", "In person", B_var = "party", "rep")
 ## Cond. on party == rep, Pr(gen2020 == In person) is 6.9%
 pretty_condprob(df, A_var = "gen2020", "In person", B_var = "party", "dem")

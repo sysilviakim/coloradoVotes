@@ -149,11 +149,25 @@ fig_list <- c("cases_thsd", "death_thsd") %>%
 
 # Export into PDFs =============================================================
 pdf(here("fig/covid_cases_jhu_cases_thsd.pdf"), width = 6, height = 4)
-print(fig_list[[1]])
+print(
+  fig_list[[1]] +
+    theme(
+      legend.position = "top",
+      legend.justification = "left",
+      legend.direction = "horizontal"
+    )
+)
 dev.off()
 
 pdf(here("fig/covid_cases_jhu_death_thsd.pdf"), width = 6, height = 4)
-print(fig_list[[2]])
+print(
+  fig_list[[2]] +
+    theme(
+      legend.position = "top",
+      legend.justification = "left",
+      legend.direction = "horizontal"
+    )
+)
 dev.off()
 
 # Out of curiosity... which state had it worst on Election Day? ================
@@ -182,6 +196,5 @@ us_long %>%
 #   state         death_thsd death
 #   <fct>              <dbl> <dbl>
 # 1 New Jersey          1.86 16371
-
 # 2 New York            1.73 33603
 # 3 Massachusetts       1.33  8696
