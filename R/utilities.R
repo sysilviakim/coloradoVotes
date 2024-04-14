@@ -415,14 +415,16 @@ party_stacked_plot <- function(df,
   )
   lvls <- ifelse(
     y == "gen2020",
-    c("In person", "Mail", "Not voted"),
-    c("Yes", "No")
+    list(c("In person", "Mail", "Not voted")),
+    list(c("Yes", "No"))
   )
+  lvls <- unlist(lvls)
   labls <- ifelse(
     y == "gen2020",
-    c("In person", "Mail", "Not voted"),
-    c("Switched to In-person", "Not Switched")
+    list(c("In person", "Mail", "Not voted")),
+    list(c("Switched to In-person", "Not Switched"))
   )
+  labls <- unlist(labls)
   p <- df %>%
     group_by(party, !!as.name(x), !!as.name(y)) %>%
     filter(!is.na(!!as.name(x))) %>%

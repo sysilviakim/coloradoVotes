@@ -363,7 +363,7 @@ dev.off()
 
 ## By party x age ==============================================================
 ## Will not include designation x party
-p <- party_stacked_plot(df_switched)
+p <- party_stacked_plot(df_switched, y = "switcher")
 pdf(here("fig", "switch_by_age_party.pdf"), width = 6, height = 4)
 print(
   pdf_default(p) +
@@ -384,7 +384,7 @@ df_switched[["reg_month"]] <- case_when(
   TRUE ~ as.Date(floor_date(df_switched$registration_date, unit = "month"))
 )
 
-p <- party_stacked_plot(df_switched, x = "reg_month")
+p <- party_stacked_plot(df_switched, y = "switcher", x = "reg_month")
 pdf(here("fig", "switch_by_reg_month_party.pdf"), width = 6, height = 4)
 print(pdf_default(p) + theme(legend.position = "bottom"))
 dev.off()
